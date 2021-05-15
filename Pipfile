@@ -9,6 +9,7 @@ click = "*"
 kmtools = {editable = true, path = "."}
 twitterapi = "*"
 omegaconf = "*"
+requests = "*"
 
 [dev-packages]
 jedi = "*"

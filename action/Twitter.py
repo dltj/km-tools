@@ -6,6 +6,7 @@ from TwitterAPI import TwitterAPI
 @click.command()
 @click.pass_obj
 def twitter(details):
+    """Post to Twitter"""
     twiter_api = TwitterAPI(
         details.config.twitter.consumer_key,
         details.config.twitter.consumer_secret,

@@ -5,6 +5,7 @@
 import click
 from omegaconf import OmegaConf
 from action import Twitter
+from source import Pinboard
 
 
 class Details:  # pylint: disable=too-few-public-methods
@@ -28,6 +29,7 @@ def cli(ctx, dry_run):
 
 # Register commands
 cli.add_command(Twitter.twitter)
+cli.add_command(Pinboard.pinboard)
 
 # pylint: disable=no-value-for-parameter
 if __name__ == "__main__":
