@@ -3,8 +3,6 @@ import click
 from TwitterAPI import TwitterAPI
 
 
-@click.command()
-@click.pass_obj
 def twitter(details):
     """Post to Twitter"""
     twiter_api = TwitterAPI(
@@ -33,7 +31,6 @@ def twitter(details):
             r = twiter_api.request("statuses/update", {"status": tweet_text})
             if r.status_code == 200:
                 click.echo("SUCCESS")
-                click.echo(row["hash"])
                 update_cur = db_con.cursor()
                 update_cur.execute(
                     "UPDATE posts SET posted_to_twitter=1 WHERE hash=?", [row["hash"]]

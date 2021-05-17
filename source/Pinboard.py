@@ -1,12 +1,9 @@
 import json
 import sqlite_utils
-import click
 import dateutil.parser
 import requests
 
 
-@click.command()
-@click.pass_obj
 def pinboard(details):
     """Update local Pinboard database"""
 

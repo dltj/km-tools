@@ -4,8 +4,7 @@
 
 import click
 from omegaconf import OmegaConf
-from action import Twitter
-from source import Pinboard
+from command import hourly
 
 
 class Details:  # pylint: disable=too-few-public-methods
@@ -28,8 +27,7 @@ def cli(ctx, dry_run):
 
 
 # Register commands
-cli.add_command(Twitter.twitter)
-cli.add_command(Pinboard.pinboard)
+cli.add_command(hourly.hourly)
 
 # pylint: disable=no-value-for-parameter
 if __name__ == "__main__":
