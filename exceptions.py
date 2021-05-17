@@ -1,0 +1,46 @@
+"""
+Handled exceptions from the Knowledge Management commands.
+"""
+
+import json
+
+
+class KMException(Exception):
+    """
+    Base class for Knowledge Management exceptions.
+    """
+
+    default_detail = "A server error occurred."
+    detail = None
+
+    def __init__(self, detail=None):
+        if detail is None:
+            self.detail = self.default_detail
+        super().__init__(detail)
+
+    def __str__(self):
+        return str(self.detail)
+
+
+class TweetError(KMException):
+    """Exception raised for Twitter API errors.
+
+    Attributes:
+        message -- explanation of the error
+    """
+
+    default_detail = "Error calling twitter"
+
+    def __init__(self, status_code, response_body):
+        message = f"({status_code}): {response_body}"
+        if str(status_code).isnumeric():
+            try:
+                response = json.loads(response_body)
+            except json.JSONDecodeError:
+                pass
+            else:
+                code = response["errors"][0]["code"]
+                twtr_msg = response["errors"][0]["message"]
+                message = f"Twitter returned HTTP {status_code} with internal code {code} and message '{twtr_msg}'"
+        self.detail = message
+        super().__init__(message)
