@@ -9,6 +9,9 @@
             <string>/usr/local/bin/pipenv</string>
             <string>run</string>
             <string>kmtools</string>
+            <string>--logfile</string>
+            <string>/tmp/kmtools</string>
+            <string>--verbose</string>
             <string>hourly</string>
         </array>
         <key>EnvironmentVariables</key>
@@ -16,20 +19,12 @@
             <key>PATH</key>
             <string>/bin:/usr/bin:/usr/local/bin</string>
         </dict>
-        <key>StandardInPath</key>
-        <string>/tmp/covid.stdin</string>
-        <key>StandardOutPath</key>
-        <string>/tmp/covid.stdout</string>
-        <key>StandardErrorPath</key>
-        <string>/tmp/covid.stderr</string>
         <key>WorkingDirectory</key>
         <string>/Users/peter/code/km-tools</string>
         <key>StartCalendarInterval</key>
         <dict>
-            <key>Hour</key>
-            <integer>1</integer>
             <key>Minute</key>
-            <integer>0</integer>
+            <integer>8</integer>
         </dict>
     </dict>
 </plist>
