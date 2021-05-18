@@ -4,13 +4,27 @@
 
 import sys
 import logging
+from logging.handlers import TimedRotatingFileHandler
 import click
 from omegaconf import OmegaConf
 from command import hourly
 
-logger = logging.getLogger(sys.argv[0])
-FORMAT = "%(asctime)s - %(levelname)s - %(module)s@%(lineno)s - %(message)s"
-logging.basicConfig(format=FORMAT)
+
+def _create_rotating_log(level=logging.INFO, logpath=None):
+    logger = logging.getLogger(__name__)
+    logger.setLevel(level)
+    handler = logging.StreamHandler(sys.stderr)
+    if logpath:
+        try:
+            handler = TimedRotatingFileHandler(logpath, when="midnight", backupCount=8)
+        except IOError:
+            logger.error("Could not write to %s, falling back to stdout", logpath)
+    formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(module)s@%(lineno)s - %(message)s"
+    )
+    handler.setFormatter(formatter)
+    logger.addHandler(handler)
+    return logger
 
 
 class Details:  # pylint: disable=too-few-public-methods
@@ -30,19 +44,20 @@ class Details:  # pylint: disable=too-few-public-methods
 @click.option(
     "-v", "--verbose", is_flag=True, default=False, help="turn on verbose messages"
 )
+@click.option("-l", "--logfile", default=None, help="log file path")
 @click.pass_context
-def cli(ctx, dry_run, debug, verbose):
+def cli(ctx, dry_run, debug, verbose, logfile):
     """Root command line function"""
     config = OmegaConf.load("config.yml")
     OmegaConf.set_readonly(config, True)
 
-    ctx.obj = Details(logger, dry_run, config)
     if debug:
-        logger.setLevel(logging.DEBUG)
+        log = _create_rotating_log(logging.DEBUG, logfile)
     elif verbose:
-        logger.setLevel(logging.INFO)
+        log = _create_rotating_log(logging.INFO, logfile)
     else:
-        logger.setLevel(logging.WARNING)
+        log = _create_rotating_log(logging.WARNING, logfile)
+    ctx.obj = Details(log, dry_run, config)
 
 
 # Register commands
