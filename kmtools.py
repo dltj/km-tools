@@ -4,10 +4,12 @@
 
 import sys
 import logging
+import sqlite3
 from logging.handlers import TimedRotatingFileHandler
 import click
 from omegaconf import OmegaConf
 from command import hourly
+from source import hypothesis
 
 
 def _create_rotating_log(level=logging.INFO, logpath=None):
@@ -36,6 +38,19 @@ class Details:  # pylint: disable=too-few-public-methods
         self.logger = logger_handle
         self.dry_run = dry_run
         self.config = config
+        self.hypothesis_db_conn = None
+
+    @property
+    def hypothesis_db(self):
+        if self.hypothesis_db_conn:
+            return self.hypothesis_db_conn
+        if self.config.hypothesis.dbfile:
+            self.hypothesis_db_conn = sqlite3.connect(self.config.hypothesis.dbfile)
+            self.hypothesis_db_conn.row_factory = sqlite3.Row
+            self.hypothesis_db_conn.execute("BEGIN EXCLUSIVE")
+        else:
+            raise RuntimeError("Hypothesis database location not set")
+        return self.hypothesis_db_conn
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})

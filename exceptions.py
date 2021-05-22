@@ -32,7 +32,7 @@ class TweetError(KMException):
     default_detail = "Error calling twitter"
 
     def __init__(self, status_code, response_body):
-        message = f"({status_code}): {response_body}"
+        message = f"(HTTP {status_code}): {response_body}"
         if str(status_code).isnumeric():
             try:
                 response = json.loads(response_body)
@@ -42,5 +42,33 @@ class TweetError(KMException):
                 code = response["errors"][0]["code"]
                 twtr_msg = response["errors"][0]["message"]
                 message = f"Twitter returned HTTP {status_code} with internal code {code} and message '{twtr_msg}'"
+        self.detail = message
+        super().__init__(message)
+
+
+class HypothesisError(KMException):
+    """Exception raised for Hypothesis API errors.
+
+    Attributes:
+        message -- explanation of the error
+    """
+
+    default_detail = "Error calling Hypothesis"
+
+    def __init__(self, status_code, response_body):
+        message = f"(HTTP {status_code}): {response_body}"
+        if str(status_code).isnumeric():
+            try:
+                response = json.loads(response_body)
+            except json.JSONDecodeError:
+                pass
+            else:
+                status = response["status"]
+                reason = response["reason"]
+                message = (
+                    f"Twitter returned HTTP {status_code} "
+                    f"with internal status {status} "
+                    f"and message '{reason}'"
+                )
         self.detail = message
         super().__init__(message)
