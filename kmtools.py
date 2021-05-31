@@ -66,13 +66,14 @@ def cli(ctx, dry_run, debug, verbose, logfile):
     """Root command line function"""
     config = OmegaConf.load("config.yml")
     OmegaConf.set_readonly(config, True)
+    logpath = logfile if logfile else config.kmtools.logfile
 
     if debug:
-        log = _create_rotating_log(logging.DEBUG, logfile)
+        log = _create_rotating_log(logging.DEBUG, logpath)
     elif verbose:
-        log = _create_rotating_log(logging.INFO, logfile)
+        log = _create_rotating_log(logging.INFO, logpath)
     else:
-        log = _create_rotating_log(logging.WARNING, logfile)
+        log = _create_rotating_log(logging.WARNING, logpath)
     ctx.obj = Details(log, dry_run, config)
 
 

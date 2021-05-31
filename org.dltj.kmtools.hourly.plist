@@ -9,8 +9,6 @@
             <string>/usr/local/bin/pipenv</string>
             <string>run</string>
             <string>kmtools</string>
-            <string>--logfile</string>
-            <string>/usr/local/var/log/kmtools</string>
             <string>--verbose</string>
             <string>hourly</string>
         </array>
