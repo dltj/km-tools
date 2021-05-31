@@ -76,6 +76,7 @@ def cli(ctx, dry_run, debug, verbose, logfile):
 
 
 # Register commands
+cli.add_command(hypothesis.hypothesis)
 cli.add_command(hourly.hourly)
 
 # pylint: disable=no-value-for-parameter

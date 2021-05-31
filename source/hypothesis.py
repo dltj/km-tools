@@ -1,6 +1,19 @@
 import json
 import requests
+import click
 import exceptions
+
+
+@click.group()
+def hypothesis():
+    """Commands for Hypothes.is"""
+
+
+@hypothesis.command(name="fetch")
+@click.pass_obj
+def fetch_command(details):
+    """Retrieve annotations"""
+    return fetch(details)
 
 
 def fetch(details):
