@@ -10,6 +10,7 @@ import click
 from omegaconf import OmegaConf
 from command import hourly
 from source import hypothesis
+from action import wayback
 
 
 def _create_rotating_log(level=logging.INFO, logpath=None):
@@ -77,6 +78,7 @@ def cli(ctx, dry_run, debug, verbose, logfile):
 
 # Register commands
 cli.add_command(hypothesis.hypothesis)
+cli.add_command(wayback.wayback)
 cli.add_command(hourly.hourly)
 
 # pylint: disable=no-value-for-parameter

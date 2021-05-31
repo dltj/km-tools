@@ -72,3 +72,32 @@ class HypothesisError(KMException):
                 )
         self.detail = message
         super().__init__(message)
+
+
+class WaybackError(KMException):
+    """Exception raised for Wayback API errors.
+
+    Attributes:
+        status_code: HTTP status code
+        response_body: HTTP response body from the endpoint
+    """
+
+    default_detail = "Error calling Wayback"
+
+    def __init__(self, status_code, response_body):
+        message = f"(HTTP {status_code}): {response_body}"
+        if str(status_code).isnumeric():
+            try:
+                response = json.loads(response_body)
+            except json.JSONDecodeError:
+                pass
+            else:
+                exception = response["exception"]
+                detail = response["status_ext"]
+                message = (
+                    f"Wayback returned HTTP {status_code} "
+                    f"with internal error '{exception}'' "
+                    f"and additional detail '{detail}'"
+                )
+        self.detail = message
+        super().__init__(message)

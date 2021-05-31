@@ -99,7 +99,7 @@ def fetch(details):
         hypothesis_db.commit()
 
 
-def get_new(details):
+def new_twitter(details):
     new_entries = []
 
     hypothesis_db = details.hypothesis_db
@@ -112,11 +112,62 @@ def get_new(details):
     return new_entries
 
 
+def new_wayback(details):
+    """Get a list of new URLs to save in the Wayback Machine.
+
+    :param details: Context object
+
+    :returns: list of URLs and save in Wayback
+    """
+    new_entries = []
+
+    hypothesis_db = details.hypothesis_db
+    search_cur = hypothesis_db.cursor()
+    query = "SELECT * FROM pages WHERE public=1 AND LENGTH(archive_url)<1"
+
+    for row in search_cur.execute(query):
+        new_entries.append(row["uri"])
+
+    return new_entries
+
+
 def save_twitter(details, uri, tweet_id):
     hypothesis_db = details.hypothesis_db
     update_cur = hypothesis_db.cursor()
     query = "UPDATE pages SET tweet_url=? WHERE uri=?"
     values = [tweet_id, uri]
+    update_cur.execute(query, values)
+    hypothesis_db.commit()
+
+
+def get_wayback_jobs(details):
+    """Get in-progress Wayback Job IDs from Hypothesis database.
+
+    :returns: list of job ids
+    """
+    job_entries = []
+
+    hypothesis_db = details.hypothesis_db
+    search_cur = hypothesis_db.cursor()
+    query = "SELECT * FROM pages WHERE archive_url NOT LIKE 'https://web.archive.org%'"
+
+    for row in search_cur.execute(query):
+        job_entries.append(row["archive_url"])
+
+    return job_entries
+
+
+def save_wayback(details, uri, value):
+    """Save state about Wayback Machine jobs in Hypothesis database.
+
+    :param details: Context object
+    :param uri: string, URL being saved
+    :param value: string, either a Wayback job id or a Wayback URL
+    """
+    hypothesis_db = details.hypothesis_db
+    update_cur = hypothesis_db.cursor()
+    query = "UPDATE pages SET archive_url=? WHERE uri=?"
+    values = [value, uri]
     update_cur.execute(query, values)
     hypothesis_db.commit()
 
