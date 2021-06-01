@@ -9,6 +9,7 @@ from logging.handlers import TimedRotatingFileHandler
 import click
 from omegaconf import OmegaConf
 from command import hourly
+from source import pinboard
 from source import hypothesis
 from action import wayback
 
@@ -40,6 +41,7 @@ class Details:  # pylint: disable=too-few-public-methods
         self.dry_run = dry_run
         self.config = config
         self.hypothesis_db_conn = None
+        self.pinboard_db_conn = None
 
     @property
     def hypothesis_db(self):
@@ -52,6 +54,18 @@ class Details:  # pylint: disable=too-few-public-methods
         else:
             raise RuntimeError("Hypothesis database location not set")
         return self.hypothesis_db_conn
+
+    @property
+    def pinboard_db(self):
+        if self.pinboard_db_conn:
+            return self.pinboard_db_conn
+        if self.config.pinboard.dbfile:
+            self.pinboard_db_conn = sqlite3.connect(self.config.pinboard.dbfile)
+            self.pinboard_db_conn.row_factory = sqlite3.Row
+            self.pinboard_db_conn.execute("BEGIN EXCLUSIVE")
+        else:
+            raise RuntimeError("Pinboard database location not set")
+        return self.pinboard_db_conn
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -78,6 +92,7 @@ def cli(ctx, dry_run, debug, verbose, logfile):
 
 
 # Register commands
+cli.add_command(pinboard.pinboard)
 cli.add_command(hypothesis.hypothesis)
 cli.add_command(wayback.wayback)
 cli.add_command(hourly.hourly)

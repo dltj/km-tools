@@ -1,10 +1,8 @@
 """ Sources and actions to perform hourly """
-import urllib
-import sqlite3
 import click
 from action.twitter import twitter
 from action import wayback
-from source.Pinboard import pinboard
+from source import pinboard
 from source import hypothesis
 import exceptions
 
@@ -56,24 +54,43 @@ def hourly(details):
                 f"{results.original_url} saved as {results.wayback_url}"
             )
 
-    pinboard(details)
-    db_con = sqlite3.connect("pinboard.db")
-    db_con.row_factory = sqlite3.Row
-    search_cur = db_con.cursor()
-    for row in search_cur.execute(
-        "SELECT * FROM posts WHERE posted_to_twitter=0 AND shared=1 ORDER BY time"
-    ):
+    pinboard.fetch(details)
 
-        details.logger.info(f"Got {row['description']} and {row['href']}")
+    new_pinboard_twitter = pinboard.new_twitter(details)
+    details.logger.debug(
+        f"Found {len(new_pinboard_twitter)} new entries from Pinboard for Twitter"
+    )
+    for row in new_pinboard_twitter:
+        details.logger.debug(f"New bookmark to tweet: {row.description} ({row.href})")
         try:
-            twitter(details, row["description"], row["href"])
+            tweet_id = twitter(details, row.description, row.href)
         except exceptions.TweetError as err:
             details.logger.error(err)
             raise SystemExit from err
-        else:
-            if not details.dry_run:
-                update_cur = db_con.cursor()
-                update_cur.execute(
-                    "UPDATE posts SET posted_to_twitter=1 WHERE hash=?", [row["hash"]]
-                )
-                db_con.commit()
+        pinboard.save_twitter(details, row.hash_value, tweet_id)
+        details.logger.info(f"Successfully tweeted about {row.href}")
+
+    new_pinboard_archive = pinboard.new_wayback(details)
+    details.logger.debug(
+        f"Found {len(new_hypothesis_archive)} new entries from Pinboard for Wayback"
+    )
+    for row in new_pinboard_archive:
+        details.logger.debug(f"New Pinboard for Wayback: {row}")
+        try:
+            wayback_job_id = wayback.save_url(details, row)
+        except exceptions.WaybackError as err:
+            details.logger.error(err)
+            raise SystemExit from err
+        pinboard.save_wayback(details, row, wayback_job_id)
+        details.logger.info(f"Started Wayback archive of {row} as job {wayback_job_id}")
+
+    wayback_jobs = pinboard.get_wayback_jobs(details)
+    details.logger.debug(f"Found {len(wayback_jobs)} Wayback job entries to check")
+    for row in wayback_jobs:
+        details.logger.debug(f"Checking status of Wayback job {row}")
+        results = wayback.check_job(details, row)
+        if results and results.completed:
+            pinboard.save_wayback(details, results.original_url, results.wayback_url)
+            details.logger.info(
+                f"{results.original_url} saved as {results.wayback_url}"
+            )

@@ -46,6 +46,22 @@ class TweetError(KMException):
         super().__init__(message)
 
 
+class PinboardError(KMException):
+    """Exception raised for Pinboard API errors.
+
+    Attributes:
+        status_code: HTTP status code
+        response_body: HTTP response body from the endpoint
+    """
+
+    default_detail = "Error calling Pinboard"
+
+    def __init__(self, status_code, response_body):
+        message = f"(HTTP {status_code}): {response_body}"
+        self.detail = message
+        super().__init__(message)
+
+
 class HypothesisError(KMException):
     """Exception raised for Hypothesis API errors.
 
