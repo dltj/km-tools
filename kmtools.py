@@ -40,32 +40,19 @@ class Details:  # pylint: disable=too-few-public-methods
         self.logger = logger_handle
         self.dry_run = dry_run
         self.config = config
-        self.hypothesis_db_conn = None
-        self.pinboard_db_conn = None
+        self.kmtools_db_conn = None
 
     @property
-    def hypothesis_db(self):
-        if self.hypothesis_db_conn:
-            return self.hypothesis_db_conn
-        if self.config.hypothesis.dbfile:
-            self.hypothesis_db_conn = sqlite3.connect(self.config.hypothesis.dbfile)
-            self.hypothesis_db_conn.row_factory = sqlite3.Row
-            self.hypothesis_db_conn.execute("BEGIN EXCLUSIVE")
+    def kmtools_db(self):
+        if self.kmtools_db_conn:
+            return self.kmtools_db_conn
+        if self.config.kmtools.dbfile:
+            self.kmtools_db_conn = sqlite3.connect(self.config.kmtools.dbfile)
+            self.kmtools_db_conn.row_factory = sqlite3.Row
+            self.kmtools_db_conn.execute("BEGIN EXCLUSIVE")
         else:
-            raise RuntimeError("Hypothesis database location not set")
-        return self.hypothesis_db_conn
-
-    @property
-    def pinboard_db(self):
-        if self.pinboard_db_conn:
-            return self.pinboard_db_conn
-        if self.config.pinboard.dbfile:
-            self.pinboard_db_conn = sqlite3.connect(self.config.pinboard.dbfile)
-            self.pinboard_db_conn.row_factory = sqlite3.Row
-            self.pinboard_db_conn.execute("BEGIN EXCLUSIVE")
-        else:
-            raise RuntimeError("Pinboard database location not set")
-        return self.pinboard_db_conn
+            raise RuntimeError("KM-Tools database location not set")
+        return self.kmtools_db_conn
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})

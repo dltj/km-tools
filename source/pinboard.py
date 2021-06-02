@@ -25,10 +25,10 @@ def fetch(details):
         "format": "json",
     }
 
-    pinboard_db = details.pinboard_db
+    db = details.kmtools_db
 
-    since_cur = pinboard_db.cursor()
-    since_date = since_cur.execute("SELECT max(time) FROM posts;").fetchone()[0]
+    since_cur = db.cursor()
+    since_date = since_cur.execute("SELECT max(time) FROM pinb_posts;").fetchone()[0]
     if since_date:
         params["fromdt"] = (
             dateutil.parser.parse(since_date)
@@ -45,7 +45,7 @@ def fetch(details):
         details.logger.debug(f"Couldn't call Pinboard: ({r.status_code}): {r.text}")
         raise exceptions.PinboardError(r.status_code, r.text)
 
-    replace_cur = pinboard_db.cursor()
+    replace_cur = db.cursor()
 
     for bookmark in r.json():
         details.logger.debug(
@@ -66,10 +66,10 @@ def fetch(details):
             "",  # archive_url
         ]
 
-        query = f"REPLACE INTO posts VALUES ({','.join('?' * len(values))})"
+        query = f"REPLACE INTO pinb_posts VALUES ({','.join('?' * len(values))})"
         replace_cur.execute(query, values)
         details.logger.info(f"Added {bookmark['href']} from {bookmark['time']}.")
-        pinboard_db.commit()
+        db.commit()
 
 
 def new_twitter(details):
@@ -83,9 +83,11 @@ def new_twitter(details):
         ],
     )
 
-    pinboard_db = details.pinboard_db
-    search_cur = pinboard_db.cursor()
-    query = "SELECT * FROM posts WHERE shared=1 AND LENGTH(tweet_url)<1 ORDER BY time"
+    db = details.kmtools_db
+    search_cur = db.cursor()
+    query = (
+        "SELECT * FROM pinb_posts WHERE shared=1 AND LENGTH(tweet_url)<1 ORDER BY time"
+    )
 
     for row in search_cur.execute(query):
         bookmark = Bookmark(row["hash"], row["href"], row["description"])
@@ -95,12 +97,12 @@ def new_twitter(details):
 
 
 def save_twitter(details, hash_value, tweet_url):
-    pinboard_db = details.pinboard_db
-    update_cur = pinboard_db.cursor()
-    query = "UPDATE posts SET tweet_url=? WHERE hash=?"
+    db = details.kmtools_db
+    update_cur = db.cursor()
+    query = "UPDATE pinb_posts SET tweet_url=? WHERE hash=?"
     values = [tweet_url, hash_value]
     update_cur.execute(query, values)
-    pinboard_db.commit()
+    db.commit()
 
 
 def new_wayback(details):
@@ -112,9 +114,9 @@ def new_wayback(details):
     """
     new_entries = []
 
-    pinboard_db = details.pinboard_db
-    search_cur = pinboard_db.cursor()
-    query = "SELECT * FROM posts WHERE shared=1 AND LENGTH(archive_url)<1"
+    db = details.kmtools_db
+    search_cur = db.cursor()
+    query = "SELECT * FROM pinb_posts WHERE shared=1 AND LENGTH(archive_url)<1"
 
     for row in search_cur.execute(query):
         new_entries.append(row["href"])
@@ -129,9 +131,11 @@ def get_wayback_jobs(details):
     """
     job_entries = []
 
-    pinboard_db = details.pinboard_db
-    search_cur = pinboard_db.cursor()
-    query = "SELECT * FROM posts WHERE archive_url NOT LIKE 'https://web.archive.org%'"
+    db = details.kmtools_db
+    search_cur = db.cursor()
+    query = (
+        "SELECT * FROM pinb_posts WHERE archive_url NOT LIKE 'https://web.archive.org%'"
+    )
 
     for row in search_cur.execute(query):
         job_entries.append(row["archive_url"])
@@ -146,16 +150,16 @@ def save_wayback(details, href, value):
     :param href: string, URL being saved
     :param value: string, either a Wayback job id or a Wayback URL
     """
-    pinboard_db = details.pinboard_db
-    update_cur = pinboard_db.cursor()
-    query = "UPDATE posts SET archive_url=? WHERE href=?"
+    db = details.kmtools_db
+    update_cur = db.cursor()
+    query = "UPDATE pinb_posts SET archive_url=? WHERE href=?"
     values = [value, href]
     update_cur.execute(query, values)
-    pinboard_db.commit()
+    db.commit()
 
 
 """
-CREATE TABLE posts (
+CREATE TABLE pinb_posts (
    hash TEXT PRIMARY KEY,
    href TEXT,
    description TEXT,

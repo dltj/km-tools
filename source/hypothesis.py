@@ -28,10 +28,10 @@ def fetch(details):
         "user": details.config.hypothesis.user,
     }
 
-    hypothesis_db = details.hypothesis_db
+    db = details.kmtools_db
 
-    since_cur = hypothesis_db.cursor()
-    since_date = since_cur.execute("SELECT max(updated) FROM posts;").fetchone()[0]
+    since_cur = db.cursor()
+    since_date = since_cur.execute("SELECT max(updated) FROM hyp_posts;").fetchone()[0]
     if since_date:
         params["search_after"] = since_date
 
@@ -43,7 +43,7 @@ def fetch(details):
         details.logger.info(f"Couldn't call Hypothesis: ({r.status_code}): {r.text}")
         raise exceptions.HypothesisError(r.status_code, r.text)
 
-    replace_cur = hypothesis_db.cursor()
+    replace_cur = db.cursor()
 
     for annotation in r.json()["rows"]:
         details.logger.debug(
@@ -72,11 +72,11 @@ def fetch(details):
             int(annotation["flagged"] == True),  # noqa: E712, pylint: disable=C0121
             0,  ## Last column is posted_to_obsidian, which we want to be false
         ]
-        query = f"REPLACE INTO posts VALUES ({','.join('?' * len(values))})"
+        query = f"REPLACE INTO hyp_posts VALUES ({','.join('?' * len(values))})"
         replace_cur.execute(query, values)
 
         if "group:__world__" in annotation["permissions"]["read"]:
-            query = "SELECT * FROM pages WHERE uri=?"
+            query = "SELECT * FROM hyp_pages WHERE uri=?"
             values = [annotation["uri"]]
             check = replace_cur.execute(query, values)
             match = check.fetchone()
@@ -88,23 +88,23 @@ def fetch(details):
                     "",  ## Has not been posted to twitter
                     "",  ## Has not been saved to archive
                 ]
-                query = "REPLACE INTO pages VALUES (?, ?, ?, ?, ?)"
+                query = "REPLACE INTO hyp_pages VALUES (?, ?, ?, ?, ?)"
                 replace_cur.execute(query, values)
                 details.logger.debug("Added to pages table.")
 
-        query = "REPLACE INTO posts_pages_map VALUES (?, ?)"
+        query = "REPLACE INTO hyp_posts_pages_map VALUES (?, ?)"
         values = [annotation["id"], annotation["uri"]]
         replace_cur.execute(query, values)
         details.logger.info(f"Added {annotation['uri']} from {annotation['updated']}.")
-        hypothesis_db.commit()
+        db.commit()
 
 
 def new_twitter(details):
     new_entries = []
 
-    hypothesis_db = details.hypothesis_db
-    search_cur = hypothesis_db.cursor()
-    query = "SELECT * FROM pages WHERE public=1 AND LENGTH(tweet_url)<1"
+    db = details.kmtools_db
+    search_cur = db.cursor()
+    query = "SELECT * FROM hyp_pages WHERE public=1 AND LENGTH(tweet_url)<1"
 
     for row in search_cur.execute(query):
         new_entries.append([row["uri"], row["title"]])
@@ -121,9 +121,9 @@ def new_wayback(details):
     """
     new_entries = []
 
-    hypothesis_db = details.hypothesis_db
-    search_cur = hypothesis_db.cursor()
-    query = "SELECT * FROM pages WHERE public=1 AND LENGTH(archive_url)<1"
+    db = details.kmtools_db
+    search_cur = db.cursor()
+    query = "SELECT * FROM hyp_pages WHERE public=1 AND LENGTH(archive_url)<1"
 
     for row in search_cur.execute(query):
         new_entries.append(row["uri"])
@@ -132,12 +132,12 @@ def new_wayback(details):
 
 
 def save_twitter(details, uri, tweet_id):
-    hypothesis_db = details.hypothesis_db
-    update_cur = hypothesis_db.cursor()
-    query = "UPDATE pages SET tweet_url=? WHERE uri=?"
+    db = details.kmtools_db
+    update_cur = db.cursor()
+    query = "UPDATE hyp_pages SET tweet_url=? WHERE uri=?"
     values = [tweet_id, uri]
     update_cur.execute(query, values)
-    hypothesis_db.commit()
+    db.commit()
 
 
 def get_wayback_jobs(details):
@@ -147,9 +147,11 @@ def get_wayback_jobs(details):
     """
     job_entries = []
 
-    hypothesis_db = details.hypothesis_db
-    search_cur = hypothesis_db.cursor()
-    query = "SELECT * FROM pages WHERE archive_url NOT LIKE 'https://web.archive.org%'"
+    db = details.kmtools_db
+    search_cur = db.cursor()
+    query = (
+        "SELECT * FROM hyp_pages WHERE archive_url NOT LIKE 'https://web.archive.org%'"
+    )
 
     for row in search_cur.execute(query):
         job_entries.append(row["archive_url"])
@@ -164,16 +166,16 @@ def save_wayback(details, uri, value):
     :param uri: string, URL being saved
     :param value: string, either a Wayback job id or a Wayback URL
     """
-    hypothesis_db = details.hypothesis_db
-    update_cur = hypothesis_db.cursor()
-    query = "UPDATE pages SET archive_url=? WHERE uri=?"
+    db = details.kmtools_db
+    update_cur = db.cursor()
+    query = "UPDATE hyp_pages SET archive_url=? WHERE uri=?"
     values = [value, uri]
     update_cur.execute(query, values)
-    hypothesis_db.commit()
+    db.commit()
 
 
 """
-CREATE TABLE posts (
+CREATE TABLE hyp_posts (
 	id TEXT PRIMARY KEY,
 	uri TEXT NOT NULL,
 	annotation TEXT,
@@ -188,7 +190,7 @@ CREATE TABLE posts (
 	flagged INTEGER,
 	posted_to_obsidian INTEGER DEFAULT 0);
     
-CREATE TABLE pages (
+CREATE TABLE hyp_pages (
 	uri TEXT PRIMARY KEY,
 	title TEXT,
 	public INTEGER DEFAULT 0,
@@ -196,7 +198,7 @@ CREATE TABLE pages (
 	archive_url TEXT
 );
 
-CREATE TABLE posts_pages_map (
+CREATE TABLE hyp_posts_pages_map (
 	uri TEXT NOT NULL,
 	annotation_id TEXT NOT NULL,
 	FOREIGN KEY (uri) REFERENCES pages(uri),
