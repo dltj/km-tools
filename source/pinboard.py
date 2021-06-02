@@ -62,7 +62,7 @@ def fetch(details):
             bookmark["shared"] == "yes",
             bookmark["toread"] == "yes",
             json.dumps(bookmark["tags"].split()),
-            0,  # posted_to_twitter
+            "",  # posted_to_twitter
             "",  # archive_url
         ]
 
@@ -165,6 +165,6 @@ CREATE TABLE posts (
    shared INTEGER,
    toread INTEGER,
    tags TEXT,
-   posted_to_twitter INTEGER DEFAULT 0,
-   archive_url INTEGER DEFAULT 0);
+   tweet_url TEXT,
+   archive_url TEXT);
 """
