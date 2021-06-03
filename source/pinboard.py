@@ -1,10 +1,9 @@
 import json
-import collections
 import click
 import dateutil.parser
 import requests
 import exceptions
-from source import Source
+from source import Source, Webpage
 
 
 @click.group()
@@ -79,31 +78,29 @@ def fetch(details):
 
 def new_entries(details, db_column):
     new_rows = []
-    Bookmark = collections.namedtuple(
-        "Bookmark",
-        [
-            "hash_value",
-            "href",
-            "title",
-        ],
-    )
 
     db = details.kmtools_db
     search_cur = db.cursor()
     query = f"SELECT * FROM pinb_posts WHERE shared=1 AND LENGTH({db_column})<1 ORDER BY time"
 
     for row in search_cur.execute(query):
-        bookmark = Bookmark(row["hash"], row["href"], row["description"])
-        new_rows.append(bookmark)
+        webpage = Webpage(
+            row["hash"],
+            row["href"],
+            row["description"],
+            row["extended"],
+            None,
+        )
+        new_rows.append(webpage)
 
     return new_rows
 
 
-def save_entry(details, db_column, hash_value, tweet_url):
+def save_entry(details, db_column, ident, stored_value):
     db = details.kmtools_db
     update_cur = db.cursor()
     query = f"UPDATE pinb_posts SET {db_column}=? WHERE hash=?"
-    values = [tweet_url, hash_value]
+    values = [stored_value, ident]
     update_cur.execute(query, values)
     db.commit()
 

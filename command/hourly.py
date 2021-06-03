@@ -27,12 +27,12 @@ def hourly(details):
                     f"New from {source_name} for {action_name}: {row.title} ({row.href})"
                 )
                 try:
-                    ident = twitter(details, row.title, row.href)
+                    result = twitter(details, row.title, row.href, row.annotation_href)
                 except exceptions.KMException as err:
                     details.logger.error(err)
                     raise SystemExit from err
                 handler.save_entry_handler(
-                    details, action_param.db_column, row.hash_value, ident
+                    details, action_param.db_column, row.ident, result
                 )
                 details.logger.info(
                     f"Successfully handled {row.href} from {source_name} for {action_name}"

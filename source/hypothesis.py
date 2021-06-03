@@ -1,9 +1,8 @@
-import collections
 import json
 import requests
 import click
 import exceptions
-from source import Source
+from source import Source, Webpage
 
 
 @click.group()
@@ -107,30 +106,29 @@ def fetch(details):
 
 def new_entries(details, db_column):
     new_rows = []
-    Annotation = collections.namedtuple(
-        "Bookmark",
-        [
-            "href",
-            "title",
-        ],
-    )
 
     db = details.kmtools_db
     search_cur = db.cursor()
-    query = "SELECT * FROM hyp_pages WHERE public=1 AND LENGTH(?)<1"
-    values = [db_column]
+    query = f"SELECT * FROM hyp_pages WHERE public=1 AND LENGTH({db_column})<1"
 
-    for row in search_cur.execute(query, values):
-        new_rows.append(Annotation([row["uri"], row["title"]]))
+    for row in search_cur.execute(query):
+        webpage = Webpage(
+            row["uri"],
+            row["uri"],
+            row["title"],
+            None,
+            f"https://via.hypothes.is/{row['uri']}",
+        )
+        new_rows.append(webpage)
 
     return new_rows
 
 
-def save_entry(details, db_column, uri, tweet_url):
+def save_entry(details, db_column, ident, stored_value):
     db = details.kmtools_db
     update_cur = db.cursor()
-    query = "UPDATE hyp_pages SET ?=? WHERE uri=?"
-    values = [db_column, tweet_url, uri]
+    query = f"UPDATE hyp_pages SET {db_column}=? WHERE uri=?"
+    values = [stored_value, ident]
     update_cur.execute(query, values)
     db.commit()
 

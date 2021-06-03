@@ -7,3 +7,14 @@ Source = collections.namedtuple(
         "save_entry_handler",
     ],
 )
+
+Webpage = collections.namedtuple(
+    "Webpage",
+    [
+        "ident",
+        "href",
+        "title",
+        "description",
+        "annotation_href",
+    ],
+)
