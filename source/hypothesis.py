@@ -1,7 +1,9 @@
+import collections
 import json
 import requests
 import click
 import exceptions
+from source import Source
 
 
 @click.group()
@@ -14,6 +16,10 @@ def hypothesis():
 def fetch_command(details):
     """Retrieve annotations"""
     return fetch(details)
+
+
+def register_source():
+    return Source(new_entries, save_entry)
 
 
 def fetch(details):
@@ -99,17 +105,34 @@ def fetch(details):
         db.commit()
 
 
-def new_twitter(details):
-    new_entries = []
+def new_entries(details, db_column):
+    new_rows = []
+    Annotation = collections.namedtuple(
+        "Bookmark",
+        [
+            "href",
+            "title",
+        ],
+    )
 
     db = details.kmtools_db
     search_cur = db.cursor()
-    query = "SELECT * FROM hyp_pages WHERE public=1 AND LENGTH(tweet_url)<1"
+    query = "SELECT * FROM hyp_pages WHERE public=1 AND LENGTH(?)<1"
+    values = [db_column]
 
-    for row in search_cur.execute(query):
-        new_entries.append([row["uri"], row["title"]])
+    for row in search_cur.execute(query, values):
+        new_rows.append(Annotation([row["uri"], row["title"]]))
 
-    return new_entries
+    return new_rows
+
+
+def save_entry(details, db_column, uri, tweet_url):
+    db = details.kmtools_db
+    update_cur = db.cursor()
+    query = "UPDATE hyp_pages SET ?=? WHERE uri=?"
+    values = [db_column, tweet_url, uri]
+    update_cur.execute(query, values)
+    db.commit()
 
 
 def new_wayback(details):
@@ -119,25 +142,16 @@ def new_wayback(details):
 
     :returns: list of URLs and save in Wayback
     """
-    new_entries = []
+    new_rows = []
 
     db = details.kmtools_db
     search_cur = db.cursor()
     query = "SELECT * FROM hyp_pages WHERE public=1 AND LENGTH(archive_url)<1"
 
     for row in search_cur.execute(query):
-        new_entries.append(row["uri"])
+        new_rows.append(row["uri"])
 
-    return new_entries
-
-
-def save_twitter(details, uri, tweet_id):
-    db = details.kmtools_db
-    update_cur = db.cursor()
-    query = "UPDATE hyp_pages SET tweet_url=? WHERE uri=?"
-    values = [tweet_id, uri]
-    update_cur.execute(query, values)
-    db.commit()
+    return new_rows
 
 
 def get_wayback_jobs(details):

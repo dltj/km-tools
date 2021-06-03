@@ -4,6 +4,7 @@ import click
 import dateutil.parser
 import requests
 import exceptions
+from source import Source
 
 
 @click.group()
@@ -16,6 +17,10 @@ def pinboard():
 def fetch_command(details):
     """Retrieve annotations"""
     return fetch(details)
+
+
+def register_source():
+    return Source(new_entries, save_entry)
 
 
 def fetch(details):
@@ -72,34 +77,32 @@ def fetch(details):
         db.commit()
 
 
-def new_twitter(details):
-    new_entries = []
+def new_entries(details, db_column):
+    new_rows = []
     Bookmark = collections.namedtuple(
         "Bookmark",
         [
             "hash_value",
             "href",
-            "description",
+            "title",
         ],
     )
 
     db = details.kmtools_db
     search_cur = db.cursor()
-    query = (
-        "SELECT * FROM pinb_posts WHERE shared=1 AND LENGTH(tweet_url)<1 ORDER BY time"
-    )
+    query = f"SELECT * FROM pinb_posts WHERE shared=1 AND LENGTH({db_column})<1 ORDER BY time"
 
     for row in search_cur.execute(query):
         bookmark = Bookmark(row["hash"], row["href"], row["description"])
-        new_entries.append(bookmark)
+        new_rows.append(bookmark)
 
-    return new_entries
+    return new_rows
 
 
-def save_twitter(details, hash_value, tweet_url):
+def save_entry(details, db_column, hash_value, tweet_url):
     db = details.kmtools_db
     update_cur = db.cursor()
-    query = "UPDATE pinb_posts SET tweet_url=? WHERE hash=?"
+    query = f"UPDATE pinb_posts SET {db_column}=? WHERE hash=?"
     values = [tweet_url, hash_value]
     update_cur.execute(query, values)
     db.commit()

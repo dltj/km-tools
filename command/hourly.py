@@ -1,5 +1,6 @@
 """ Sources and actions to perform hourly """
 import click
+import action
 from action.twitter import twitter
 from action import wayback
 from source import pinboard
@@ -12,22 +13,30 @@ import exceptions
 def hourly(details):
     """Perform the hourly gathering from sources and action activations"""
 
+    pinboard.fetch(details)
     hypothesis.fetch(details)
 
-    new_hypothesis_twitter = hypothesis.new_twitter(details)
-    details.logger.debug(
-        f"Found {len(new_hypothesis_twitter)} new entries from Hypothesis for Twitter"
-    )
-    for row in new_hypothesis_twitter:
-        details.logger.debug(f"New Hypothesis: {row[1]} ({row[0]})")
-        via_url = f"https://via.hypothes.is/{row[0]}"
-        try:
-            tweet_id = twitter(details, row[1], row[0], via_url)
-        except exceptions.TweetError as err:
-            details.logger.error(err)
-            raise SystemExit from err
-        hypothesis.save_twitter(details, row[0], tweet_id)
-        details.logger.info(f"Successfully tweeted about {row[1]}")
+    for action_name, action_param in details.actions.items():
+        for source_name, handler in details.dispatch.items():
+            new_entries = handler.new_entries_handler(details, action_param.db_column)
+            details.logger.info(
+                f"Found {len(new_entries)} new entries from {source_name} for {action_name}"
+            )
+            for row in new_entries:
+                details.logger.debug(
+                    f"New from {source_name} for {action_name}: {row.title} ({row.href})"
+                )
+                try:
+                    ident = twitter(details, row.title, row.href)
+                except exceptions.KMException as err:
+                    details.logger.error(err)
+                    raise SystemExit from err
+                handler.save_entry_handler(
+                    details, action_param.db_column, row.hash_value, ident
+                )
+                details.logger.info(
+                    f"Successfully handled {row.href} from {source_name} for {action_name}"
+                )
 
     new_hypothesis_archive = hypothesis.new_wayback(details)
     details.logger.debug(
@@ -54,24 +63,8 @@ def hourly(details):
                 f"{results.original_url} saved as {results.wayback_url}"
             )
 
-    pinboard.fetch(details)
-
-    new_pinboard_twitter = pinboard.new_twitter(details)
-    details.logger.debug(
-        f"Found {len(new_pinboard_twitter)} new entries from Pinboard for Twitter"
-    )
-    for row in new_pinboard_twitter:
-        details.logger.debug(f"New bookmark to tweet: {row.description} ({row.href})")
-        try:
-            tweet_id = twitter(details, row.description, row.href)
-        except exceptions.TweetError as err:
-            details.logger.error(err)
-            raise SystemExit from err
-        pinboard.save_twitter(details, row.hash_value, tweet_id)
-        details.logger.info(f"Successfully tweeted about {row.href}")
-
     new_pinboard_archive = pinboard.new_wayback(details)
-    details.logger.debug(
+    details.logger.info(
         f"Found {len(new_hypothesis_archive)} new entries from Pinboard for Wayback"
     )
     for row in new_pinboard_archive:

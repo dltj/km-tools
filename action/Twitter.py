@@ -1,6 +1,11 @@
 """Post to Twitter"""
 from TwitterAPI import TwitterAPI
+from action import Action
 import exceptions
+
+
+def register_action():
+    return Action("tweet_url")
 
 
 def twitter(details, text=None, url=None, annotation_url=None):

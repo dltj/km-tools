@@ -9,9 +9,9 @@ from logging.handlers import TimedRotatingFileHandler
 import click
 from omegaconf import OmegaConf
 from command import hourly
+from action import twitter, wayback
 from source import pinboard
 from source import hypothesis
-from action import wayback
 
 
 def _create_rotating_log(level=logging.INFO, logpath=None):
@@ -36,10 +36,19 @@ class Details:  # pylint: disable=too-few-public-methods
 
     twitter_short_url_length = None
 
-    def __init__(self, logger_handle=None, dry_run=False, config=None):
+    def __init__(
+        self,
+        logger_handle=None,
+        dry_run=False,
+        config=None,
+        dispatch=None,
+        actions=None,
+    ):
         self.logger = logger_handle
         self.dry_run = dry_run
         self.config = config
+        self.dispatch = dispatch
+        self.actions = actions
         self.kmtools_db_conn = None
 
     @property
@@ -50,6 +59,7 @@ class Details:  # pylint: disable=too-few-public-methods
             self.kmtools_db_conn = sqlite3.connect(self.config.kmtools.dbfile)
             self.kmtools_db_conn.row_factory = sqlite3.Row
             self.kmtools_db_conn.execute("BEGIN EXCLUSIVE")
+            self.kmtools_db_conn.set_trace_callback(self.logger.debug)
         else:
             raise RuntimeError("KM-Tools database location not set")
         return self.kmtools_db_conn
@@ -75,7 +85,17 @@ def cli(ctx, dry_run, debug, verbose, logfile):
         log = _create_rotating_log(logging.INFO, logpath)
     else:
         log = _create_rotating_log(logging.WARNING, logpath)
-    ctx.obj = Details(log, dry_run, config)
+
+    # Register source dispatchers
+    dispatch = {}
+    dispatch["Pinboard"] = pinboard.register_source()
+    dispatch["Hypothesis"] = hypothesis.register_source()
+
+    # Register actions
+    actions = {}
+    actions["Twitter"] = twitter.register_action()
+
+    ctx.obj = Details(log, dry_run, config, dispatch, actions)
 
 
 # Register commands
