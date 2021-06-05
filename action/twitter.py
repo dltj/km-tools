@@ -4,11 +4,11 @@ from action import Action
 import exceptions
 
 
-def register_action():
-    return Action("tweet_url")
+def register_hourly_action():
+    return Action("tweet_url", tweet_entry)
 
 
-def twitter(details, text=None, url=None, annotation_url=None):
+def tweet_entry(details, url=None, text=None, annotation_url=None):
     """Post to Twitter"""
     twiter_api = TwitterAPI(
         details.config.twitter.consumer_key,
@@ -46,3 +46,4 @@ def twitter(details, text=None, url=None, annotation_url=None):
             raise exceptions.TweetError(r.status_code, r.text)
     else:
         details.logger.info(f"Would have tweeted: {tweet_text}")
+        return ""  ## Dry-run, so return empty string

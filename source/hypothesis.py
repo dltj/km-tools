@@ -133,25 +133,6 @@ def save_entry(details, db_column, ident, stored_value):
     db.commit()
 
 
-def new_wayback(details):
-    """Get a list of new URLs to save in the Wayback Machine.
-
-    :param details: Context object
-
-    :returns: list of URLs and save in Wayback
-    """
-    new_rows = []
-
-    db = details.kmtools_db
-    search_cur = db.cursor()
-    query = "SELECT * FROM hyp_pages WHERE public=1 AND LENGTH(archive_url)<1"
-
-    for row in search_cur.execute(query):
-        new_rows.append(row["uri"])
-
-    return new_rows
-
-
 def get_wayback_jobs(details):
     """Get in-progress Wayback Job IDs from Hypothesis database.
 
@@ -169,21 +150,6 @@ def get_wayback_jobs(details):
         job_entries.append(row["archive_url"])
 
     return job_entries
-
-
-def save_wayback(details, uri, value):
-    """Save state about Wayback Machine jobs in Hypothesis database.
-
-    :param details: Context object
-    :param uri: string, URL being saved
-    :param value: string, either a Wayback job id or a Wayback URL
-    """
-    db = details.kmtools_db
-    update_cur = db.cursor()
-    query = "UPDATE hyp_pages SET archive_url=? WHERE uri=?"
-    values = [value, uri]
-    update_cur.execute(query, values)
-    db.commit()
 
 
 """

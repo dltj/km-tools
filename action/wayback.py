@@ -2,6 +2,7 @@
 import collections
 import requests
 import click
+from action import Action
 import exceptions
 
 
@@ -48,7 +49,12 @@ def check_job_command(details, job_id=None):
         click.echo("No job_id submitted.")
 
 
-def save_url(details, url=None):
+def register_hourly_action():
+    return Action("archive_url", save_url)
+
+
+# FIXME: Do better than this with the positional arguments
+def save_url(details, url=None, discard1=None, discard2=None):
     """Archive at Wayback
 
     :param details: Context object

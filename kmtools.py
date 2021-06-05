@@ -41,13 +41,13 @@ class Details:  # pylint: disable=too-few-public-methods
         logger_handle=None,
         dry_run=False,
         config=None,
-        dispatch=None,
+        sources=None,
         actions=None,
     ):
         self.logger = logger_handle
         self.dry_run = dry_run
         self.config = config
-        self.dispatch = dispatch
+        self.sources = sources
         self.actions = actions
         self.kmtools_db_conn = None
 
@@ -87,15 +87,16 @@ def cli(ctx, dry_run, debug, verbose, logfile):
         log = _create_rotating_log(logging.WARNING, logpath)
 
     # Register source dispatchers
-    dispatch = {}
-    dispatch["Pinboard"] = pinboard.register_source()
-    dispatch["Hypothesis"] = hypothesis.register_source()
+    sources = {}
+    sources["Pinboard"] = pinboard.register_source()
+    sources["Hypothesis"] = hypothesis.register_source()
 
     # Register actions
     actions = {}
-    actions["Twitter"] = twitter.register_action()
+    actions["Twitter"] = twitter.register_hourly_action()
+    actions["Wayback"] = wayback.register_hourly_action()
 
-    ctx.obj = Details(log, dry_run, config, dispatch, actions)
+    ctx.obj = Details(log, dry_run, config, sources, actions)
 
 
 # Register commands
