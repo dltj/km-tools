@@ -2,7 +2,7 @@ import json
 import requests
 import click
 import exceptions
-from source import Source, Webpage
+from source import Source, Webpage, Annotation
 
 
 @click.group()
@@ -69,7 +69,7 @@ def fetch(details):
             annotation["created"],
             annotation["updated"],
             quote,
-            f"{json.dumps(annotation['tags']).split()}",
+            annotation["tags"],
             annotation["document"]["title"][0],
             annotation["links"]["html"],
             annotation["links"]["incontext"],
@@ -117,6 +117,7 @@ def new_entries(details, db_column):
             row["uri"],
             row["title"],
             None,
+            None,
             f"https://via.hypothes.is/{row['uri']}",
         )
         new_rows.append(webpage)
@@ -152,6 +153,53 @@ def get_wayback_jobs(details):
     return job_entries
 
 
+def get_new_annotations(details):
+    """Get an iterator of new Hypothesis annotations
+
+    :param details: context object
+
+    :returns: an Annotation
+    """
+    db = details.kmtools_db
+    search_cur = db.cursor()
+    query = "SELECT * FROM hyp_posts WHERE LENGTH(obsidian_file)<1 ORDER BY updated"
+
+    for row in search_cur.execute(query):
+        yield (
+            Annotation(
+                row["id"],
+                row["uri"],
+                row["annotation"],
+                row["created"],
+                row["updated"],
+                row["quote"],
+                row["tags"],
+                row["document_title"],
+                row["link_html"],
+                row["link_incontext"],
+                row["hidden"],
+                row["flagged"],
+            )
+        )
+
+
+def save_annotation(details, uri, location):
+    """Save where an annotation has been saved in Obsidian.
+
+    :param details: context object
+    :param id: id of the annotation
+    :param location: file path to the Obsidian file
+
+    :returns: None
+    """
+    db = details.kmtools_db
+    update_cur = db.cursor()
+    query = "UPDATE hyp_posts SET obsidian_file=? WHERE id=?"
+    values = [location, uri]
+    update_cur.execute(query, values)
+    db.commit()
+
+
 """
 CREATE TABLE hyp_posts (
 	id TEXT PRIMARY KEY,
@@ -166,7 +214,7 @@ CREATE TABLE hyp_posts (
 	link_incontext INTEGER,
 	hidden INTEGER,
 	flagged INTEGER,
-	posted_to_obsidian INTEGER DEFAULT 0);
+	obsidian_file TEXT);
     
 CREATE TABLE hyp_pages (
 	uri TEXT PRIMARY KEY,

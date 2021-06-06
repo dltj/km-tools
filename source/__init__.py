@@ -15,6 +15,25 @@ Webpage = collections.namedtuple(
         "href",
         "title",
         "description",
+        "tags",
         "annotation_href",
+    ],
+)
+
+Annotation = collections.namedtuple(
+    "Annotation",
+    [
+        "id",
+        "uri",
+        "annotation",
+        "created",
+        "updated",
+        "quote",
+        "tags",
+        "document_title",
+        "link_html",
+        "link_incontext",
+        "hidden",
+        "flagged",
     ],
 )

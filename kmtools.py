@@ -3,13 +3,15 @@
 """Knowledge Management CLI."""
 
 import sys
+import os
+from datetime import datetime
 import logging
 import sqlite3
 from logging.handlers import TimedRotatingFileHandler
 import click
 from omegaconf import OmegaConf
-from command import hourly
-from action import twitter, wayback
+from command import hourly, daily
+from action import twitter, wayback, obsidian
 from source import pinboard
 from source import hypothesis
 
@@ -64,6 +66,16 @@ class Details:  # pylint: disable=too-few-public-methods
             raise RuntimeError("KM-Tools database location not set")
         return self.kmtools_db_conn
 
+    @property
+    def obsidian_daily_file(self):
+        diary_filename = datetime.now().strftime("%Y-%m-%d")
+        diary_path = os.path.join(
+            self.config.obsidian.db_directory,
+            self.config.obsidian.daily_directory,
+            f"{diary_filename}.md",
+        )
+        return diary_path
+
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option("--dry-run", is_flag=True)
@@ -103,7 +115,9 @@ def cli(ctx, dry_run, debug, verbose, logfile):
 cli.add_command(pinboard.pinboard)
 cli.add_command(hypothesis.hypothesis)
 cli.add_command(wayback.wayback)
+cli.add_command(obsidian.obsidian)
 cli.add_command(hourly.hourly)
+cli.add_command(daily.daily)
 
 # pylint: disable=no-value-for-parameter
 if __name__ == "__main__":

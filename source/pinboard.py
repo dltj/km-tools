@@ -89,6 +89,7 @@ def new_entries(details, db_column):
             row["href"],
             row["description"],
             row["extended"],
+            row["tags"],
             None,
         )
         new_rows.append(webpage)
@@ -136,5 +137,6 @@ CREATE TABLE pinb_posts (
    toread INTEGER,
    tags TEXT,
    tweet_url TEXT,
-   archive_url TEXT);
+   archive_url TEXT,
+   obsidian_date TEXT);
 """

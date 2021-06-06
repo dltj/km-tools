@@ -81,7 +81,7 @@ def save_url(details, url=None, discard1=None, discard2=None):
         "Authorization"
     ] = f"LOW {details.config.wayback.access_key}:{details.config.wayback.secret_key}"
 
-    if not details.dry_run:
+    if not details.dry_run:  # pylint: disable=R1720
         r = requests.post(wayback_endpoint, headers=wayback_headers, data=wayback_body)
         details.logger.debug(f"Returned status {r.status_code}, '{r.text}'")
         if r.status_code == 200:
@@ -136,7 +136,7 @@ def check_job(details, job_id=None):
             "details",
         ],
     )
-    if not details.dry_run:
+    if not details.dry_run:  # pylint: disable=R1720
         r = requests.get(wayback_endpoint, headers=wayback_headers)
         details.logger.debug(f"Returned status {r.status_code}, '{r.text}'")
         if r.status_code == 200:

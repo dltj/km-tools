@@ -1,0 +1,30 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+    <dict>
+        <key>Label</key>
+        <string>org.dltj.kmtools.daily</string>
+        <key>ProgramArguments</key>
+        <array>
+            <string>/usr/local/bin/pipenv</string>
+            <string>run</string>
+            <string>kmtools</string>
+            <string>--verbose</string>
+            <string>daily</string>
+        </array>
+        <key>EnvironmentVariables</key>
+        <dict>
+            <key>PATH</key>
+            <string>/bin:/usr/bin:/usr/local/bin</string>
+        </dict>
+        <key>WorkingDirectory</key>
+        <string>/Users/peter/code/km-tools</string>
+        <key>StartCalendarInterval</key>
+        <dict>
+            <key>Hour</key>
+            <integer>7</integer>
+            <key>Minute</key>
+            <integer>20</integer>
+        </dict>
+    </dict>
+</plist>
