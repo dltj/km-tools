@@ -68,7 +68,8 @@ def fetch(details):
             json.dumps(bookmark["tags"].split()),
             "",  # posted_to_twitter
             "",  # archive_url
-            "",  # obsidian"
+            "",  # obsidian file path
+            "",  # mastodon url
         ]
 
         query = f"REPLACE INTO pinb_posts VALUES ({','.join('?' * len(values))})"
@@ -139,5 +140,7 @@ CREATE TABLE pinb_posts (
    tags TEXT,
    tweet_url TEXT,
    archive_url TEXT,
-   obsidian_date TEXT);
+   obsidian_date TEXT,
+   toot_url TEXT
+);
 """

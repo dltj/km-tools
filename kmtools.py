@@ -11,7 +11,7 @@ from logging.handlers import TimedRotatingFileHandler
 import click
 from omegaconf import OmegaConf
 from command import hourly, daily
-from action import twitter, wayback, obsidian
+from action import twitter, wayback, obsidian, mastodon
 from source import pinboard
 from source import hypothesis
 
@@ -107,6 +107,7 @@ def cli(ctx, dry_run, debug, verbose, logfile):
     actions = {}
     actions["Twitter"] = twitter.register_hourly_action()
     actions["Wayback"] = wayback.register_hourly_action()
+    actions["Mastodon"] = mastodon.register_hourly_action()
 
     ctx.obj = Details(log, dry_run, config, sources, actions)
 
@@ -116,6 +117,7 @@ cli.add_command(pinboard.pinboard)
 cli.add_command(hypothesis.hypothesis)
 cli.add_command(wayback.wayback)
 cli.add_command(obsidian.obsidian)
+cli.add_command(mastodon.mastodon)
 cli.add_command(hourly.hourly)
 cli.add_command(daily.daily)
 

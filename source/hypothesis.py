@@ -75,7 +75,7 @@ def fetch(details):
             annotation["links"]["incontext"],
             int(annotation["hidden"] == True),  # noqa: E712, pylint: disable=C0121
             int(annotation["flagged"] == True),  # noqa: E712, pylint: disable=C0121
-            "",  ## Last column is posted_to_obsidian, which we want to be false
+            "",  # obsidian path to file
         ]
         query = f"REPLACE INTO hyp_posts VALUES ({','.join('?' * len(values))})"
         replace_cur.execute(query, values)
@@ -90,8 +90,9 @@ def fetch(details):
                     annotation["uri"],
                     annotation["document"]["title"][0],
                     1,  ## Is public
-                    "",  ## Has not been posted to twitter
-                    "",  ## Has not been saved to archive
+                    "",  # Twitter URL (when posted)
+                    "",  # Wayback URL (when saved)
+                    "",  # Mastodon URL (when tooted)
                 ]
                 query = "REPLACE INTO hyp_pages VALUES (?, ?, ?, ?, ?)"
                 replace_cur.execute(query, values)
@@ -221,7 +222,8 @@ CREATE TABLE hyp_pages (
 	title TEXT,
 	public INTEGER DEFAULT 0,
 	tweet_url TEXT,
-	archive_url TEXT
+	archive_url TEXT,
+   toot_url TEXT
 );
 
 CREATE TABLE hyp_posts_pages_map (
