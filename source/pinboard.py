@@ -68,6 +68,7 @@ def fetch(details):
             json.dumps(bookmark["tags"].split()),
             "",  # posted_to_twitter
             "",  # archive_url
+            "",  # obsidian"
         ]
 
         query = f"REPLACE INTO pinb_posts VALUES ({','.join('?' * len(values))})"

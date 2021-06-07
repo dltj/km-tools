@@ -69,13 +69,13 @@ def fetch(details):
             annotation["created"],
             annotation["updated"],
             quote,
-            annotation["tags"],
+            json.dumps(annotation["tags"]),
             annotation["document"]["title"][0],
             annotation["links"]["html"],
             annotation["links"]["incontext"],
             int(annotation["hidden"] == True),  # noqa: E712, pylint: disable=C0121
             int(annotation["flagged"] == True),  # noqa: E712, pylint: disable=C0121
-            0,  ## Last column is posted_to_obsidian, which we want to be false
+            "",  ## Last column is posted_to_obsidian, which we want to be false
         ]
         query = f"REPLACE INTO hyp_posts VALUES ({','.join('?' * len(values))})"
         replace_cur.execute(query, values)
