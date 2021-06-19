@@ -17,13 +17,7 @@ def tweet_entry(details, url=None, text=None, annotation_url=None):
         details.config.twitter.access_token_secret,
     )
 
-    # Get the number of characters a Twitter-shortened URL will take up
-    if not details.twitter_short_url_length:
-        r = twiter_api.request("help/configuration")
-        twitter_config = r.json()
-        details.twitter_short_url_length = twitter_config["short_url_length_https"]
-    short_url_length = details.twitter_short_url_length
-
+    short_url_length = 23
     annotation_length = 0
     annotation_addition = ""
     if annotation_url:

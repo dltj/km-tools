@@ -36,8 +36,6 @@ def _create_rotating_log(level=logging.INFO, logpath=None):
 class Details:  # pylint: disable=too-few-public-methods
     """Application-specific context"""
 
-    twitter_short_url_length = None
-
     def __init__(
         self,
         logger_handle=None,
