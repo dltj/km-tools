@@ -94,7 +94,7 @@ def fetch(details):
                     "",  # Wayback URL (when saved)
                     "",  # Mastodon URL (when tooted)
                 ]
-                query = "REPLACE INTO hyp_pages VALUES (?, ?, ?, ?, ?)"
+                query = "REPLACE INTO hyp_pages VALUES (?, ?, ?, ?, ?, ?)"
                 replace_cur.execute(query, values)
                 details.logger.debug("Added to pages table.")
 
