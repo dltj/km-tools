@@ -63,6 +63,10 @@ def save_url(details, url=None, discard1=None, discard2=None):
     :returns: str, Wayback Job ID string
     """
 
+    ## This conditional effectively skips saving Internet Archive URLs into wayback
+    if url.startswith("https://archive.org/"):
+        return url
+
     wayback_headers = {
         "Accept": "application/json",
     }
