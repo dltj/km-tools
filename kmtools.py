@@ -16,23 +16,6 @@ from source import pinboard
 from source import hypothesis
 
 
-def _create_rotating_log(level=logging.INFO, logpath=None):
-    logger = logging.getLogger(__name__)
-    logger.setLevel(level)
-    handler = logging.StreamHandler(sys.stderr)
-    if logpath:
-        try:
-            handler = TimedRotatingFileHandler(logpath, when="midnight", backupCount=8)
-        except IOError:
-            logger.error("Could not write to %s, falling back to stdout", logpath)
-    formatter = logging.Formatter(
-        "%(asctime)s - %(levelname)s - %(module)s@%(lineno)s - %(message)s"
-    )
-    handler.setFormatter(formatter)
-    logger.addHandler(handler)
-    return logger
-
-
 class Details:  # pylint: disable=too-few-public-methods
     """Application-specific context"""
 
@@ -87,14 +70,38 @@ def cli(ctx, dry_run, debug, verbose, logfile):
     """Root command line function"""
     config = OmegaConf.load("config.yml")
     OmegaConf.set_readonly(config, True)
-    logpath = logfile if logfile else config.kmtools.logfile
+
+    log = logging.getLogger(__name__)
+    if sys.stdin and sys.stdin.isatty():
+        if not logfile:
+            handler = logging.StreamHandler(sys.stderr)
+        else:
+            try:
+                handler = logging.FileHandler(logfile)
+            except IOError:
+                log.error("Could not write to %s, falling back to stdout", logfile)
+    else:
+        logpath = logfile if logfile else config.kmtools.logfile
+        if logpath:
+            try:
+                handler = TimedRotatingFileHandler(
+                    logpath, when="midnight", backupCount=8
+                )
+            except IOError:
+                log.error("Could not write to %s, falling back to stdout", logpath)
+
+    formatter = logging.Formatter(
+        "%(asctime)s - %(levelname)s - %(module)s@%(lineno)s - %(message)s"
+    )
+    handler.setFormatter(formatter)
+    log.addHandler(handler)
 
     if debug:
-        log = _create_rotating_log(logging.DEBUG, logpath)
+        log.setLevel(logging.DEBUG)
     elif verbose:
-        log = _create_rotating_log(logging.INFO, logpath)
+        log.setLevel(logging.INFO)
     else:
-        log = _create_rotating_log(logging.WARNING, logpath)
+        log.setLevel(logging.WARNING)
 
     # Register source dispatchers
     sources = {}
