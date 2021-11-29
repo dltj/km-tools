@@ -1,4 +1,5 @@
 import json
+import datetime
 import requests
 import click
 import exceptions
@@ -93,8 +94,9 @@ def fetch(details):
                     "",  # Twitter URL (when posted)
                     "",  # Wayback URL (when saved)
                     "",  # Mastodon URL (when tooted)
+                    datetime.datetime.now().strftime("%Y-%m-%d, %H:%M:%S%z"),
                 ]
-                query = "REPLACE INTO hyp_pages VALUES (?, ?, ?, ?, ?, ?)"
+                query = "REPLACE INTO hyp_pages VALUES (?, ?, ?, ?, ?, ?, ?)"
                 replace_cur.execute(query, values)
                 details.logger.debug("Added to pages table.")
 
@@ -103,6 +105,30 @@ def fetch(details):
         replace_cur.execute(query, values)
         details.logger.info(f"Added {annotation['uri']} from {annotation['updated']}.")
         db.commit()
+
+
+def find_entry(details, href):
+    db = details.kmtools_db
+    search_cur = db.cursor()
+    query = "SELECT * FROM hyp_pages WHERE uri=:href"
+    search_cur.execute(query, [href])
+    row = search_cur.fetchone()
+    if row:
+        webpage = Webpage(
+            row["uri"],
+            row["uri"],
+            row["title"],
+            None,
+            None,
+            f"https://via.hypothes.is/{row['uri']}",
+            row["archive_url"],
+            row["time"],
+        )
+        if search_cur.fetchone():
+            raise exceptions.MoreThanOneError
+    else:
+        webpage = None
+    return webpage
 
 
 def new_entries(details, db_column):
@@ -120,6 +146,8 @@ def new_entries(details, db_column):
             None,
             None,
             f"https://via.hypothes.is/{row['uri']}",
+            row["archive_url"],
+            row["time"],
         )
         new_rows.append(webpage)
 
@@ -216,7 +244,7 @@ CREATE TABLE hyp_posts (
 	hidden INTEGER,
 	flagged INTEGER,
 	obsidian_file TEXT);
-    
+
 CREATE TABLE hyp_pages (
 	uri TEXT PRIMARY KEY,
 	title TEXT,

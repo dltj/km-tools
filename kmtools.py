@@ -10,7 +10,7 @@ import sqlite3
 from logging.handlers import TimedRotatingFileHandler
 import click
 from omegaconf import OmegaConf
-from command import hourly, daily
+from command import hourly, daily, robustify
 from action import twitter, wayback, obsidian, mastodon
 from source import pinboard
 from source import hypothesis
@@ -125,6 +125,7 @@ cli.add_command(obsidian.obsidian)
 cli.add_command(mastodon.mastodon)
 cli.add_command(hourly.hourly)
 cli.add_command(daily.daily)
+cli.add_command(robustify.robustify)
 
 # pylint: disable=no-value-for-parameter
 if __name__ == "__main__":

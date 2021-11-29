@@ -78,6 +78,30 @@ def fetch(details):
         db.commit()
 
 
+def find_entry(details, href):
+    db = details.kmtools_db
+    search_cur = db.cursor()
+    query = "SELECT * FROM pinb_posts WHERE href=:href"
+    search_cur.execute(query, [href])
+    row = search_cur.fetchone()
+    if row:
+        webpage = Webpage(
+            row["hash"],
+            row["href"],
+            row["description"],
+            row["extended"],
+            row["tags"],
+            None,
+            row["archive_url"],
+            row["time"],
+        )
+        if search_cur.fetchone():
+            raise exceptions.MoreThanOneError
+    else:
+        webpage = None
+    return webpage
+
+
 def new_entries(details, db_column):
     new_rows = []
 
@@ -93,6 +117,8 @@ def new_entries(details, db_column):
             row["extended"],
             row["tags"],
             None,
+            row["archive_url"],
+            row["archive_date"],
         )
         new_rows.append(webpage)
 

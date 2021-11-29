@@ -17,6 +17,8 @@ Webpage = collections.namedtuple(
         "description",
         "tags",
         "annotation_href",
+        "archive_url",
+        "archive_date",
     ],
 )
 

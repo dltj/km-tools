@@ -62,6 +62,15 @@ class PinboardError(KMException):
         super().__init__(message)
 
 
+class MoreThanOneError(KMException):
+    """Exception raised when a search of sources for a URL returns more than one row."""
+
+    default_detail = "More than one URL returned"
+
+    def __init__(self):
+        super().__init__()
+
+
 class HypothesisError(KMException):
     """Exception raised for Hypothesis API errors.
 
