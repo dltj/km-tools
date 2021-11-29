@@ -118,7 +118,7 @@ def new_entries(details, db_column):
             row["tags"],
             None,
             row["archive_url"],
-            row["archive_date"],
+            row["time"],
         )
         new_rows.append(webpage)
 
