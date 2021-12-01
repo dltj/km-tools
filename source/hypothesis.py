@@ -94,7 +94,7 @@ def fetch(details):
                     "",  # Twitter URL (when posted)
                     "",  # Wayback URL (when saved)
                     "",  # Mastodon URL (when tooted)
-                    datetime.datetime.now().strftime("%Y-%m-%d, %H:%M:%S%z"),
+                    datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z"),
                 ]
                 query = "REPLACE INTO hyp_pages VALUES (?, ?, ?, ?, ?, ?, ?)"
                 replace_cur.execute(query, values)
