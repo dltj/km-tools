@@ -4,7 +4,7 @@
 
 import sys
 import os
-from datetime import datetime
+import arrow
 import logging
 import sqlite3
 from logging.handlers import TimedRotatingFileHandler
@@ -33,6 +33,11 @@ class Details:  # pylint: disable=too-few-public-methods
         self.sources = sources
         self.actions = actions
         self.kmtools_db_conn = None
+        self.obsidian = obsidian.Obsidian(
+            config.obsidian.db_directory,
+            config.obsidian.daily_directory,
+            config.obsidian.source_directory,
+        )
 
     @property
     def kmtools_db(self):
@@ -46,16 +51,6 @@ class Details:  # pylint: disable=too-few-public-methods
         else:
             raise RuntimeError("KM-Tools database location not set")
         return self.kmtools_db_conn
-
-    @property
-    def obsidian_daily_file(self):
-        diary_filename = datetime.now().strftime("%Y-%m-%d")
-        diary_path = os.path.join(
-            self.config.obsidian.db_directory,
-            self.config.obsidian.daily_directory,
-            f"{diary_filename}.md",
-        )
-        return diary_path
 
     def output_fd(self, file):
         """Route output depending on whether this is a dry run or not

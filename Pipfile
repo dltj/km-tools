@@ -11,6 +11,7 @@ twitterapi = "*"
 omegaconf = "*"
 requests = "*"
 "mastodon.py" = "*"
+arrow = "*"
 
 [dev-packages]
 jedi = "*"
