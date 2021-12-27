@@ -15,7 +15,6 @@ from action import twitter, wayback, obsidian, mastodon
 from source import pinboard
 from source import hypothesis
 
-
 class Details:  # pylint: disable=too-few-public-methods
     """Application-specific context"""
 
@@ -57,6 +56,20 @@ class Details:  # pylint: disable=too-few-public-methods
         )
         return diary_path
 
+    def output_fd(self, file):
+        """Route output depending on whether this is a dry run or not
+
+        :param details: context object
+        :param file: full path to output file
+
+        return: file descriptor, stdout when dry_run, otherwise append file
+        """
+        if self.dry_run:
+            fd = os.fdopen(os.dup(sys.stdout.fileno()), "w")
+        else:
+            fd = open(file, "a")
+
+        return fd
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option("--dry-run", is_flag=True)

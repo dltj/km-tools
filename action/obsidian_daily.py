@@ -7,21 +7,17 @@ from source import hypothesis
 
 
 def daily(details):
-    """Update local Hypothesis database"""
+    """Perform daily functions"""
 
     obsidian_db_column = "obsidian_file"
-    obsidian_dispatch = {}
-    obsidian_dispatch["pinboard"] = daily_pinboard
-
-    with (
-        os.fdopen(os.dup(sys.stdout.fileno()), "w")
-        if details.dry_run
-        else open(details.obsidian_daily_file, "a")
-    ) as daily_fd:
-
+    obsidian_dispatch = {
+        "pinboard": create_pinboard_entry,
+    }
+ 
+    with details.output_fd(details.obsidian_daily_file) as daily_fd:
         for source_name, source in details.sources.items():
-            if source_name.lower() == "hypothesis":
-                continue  # handled as a special case below
+            if source_name.lower() == 'hypothesis':
+                continue    # Handled later as annotations, not as an individual source
             if source_name.lower() not in obsidian_dispatch:
                 details.logger.warning(f"No Obsidian dispatch found for {source_name}.")
                 continue
@@ -35,9 +31,7 @@ def daily(details):
                     f"New from {source_name} for Obsidian: {entry.title} ({entry.href})"
                 )
                 try:
-                    result = obsidian_dispatch[source_name.lower()](
-                        details, entry, daily_fd
-                    )
+                    result = obsidian_dispatch[source_name.lower()](details, entry)
                 except exceptions.KMException as err:
                     details.logger.error(err)
                     raise SystemExit from err
@@ -50,37 +44,52 @@ def daily(details):
                     )
                 else:
                     details.logger.info(f"Would have saved {entry.href}")
+    
+        create_hypothesis_entries(details, daily_fd)
 
-        daily_hypothesis(details, daily_fd)
 
+def create_pinboard_entry(details, entry):  # pylint: disable=w0613
+    """Output an entry from Pinboard into Obsidian
 
-def daily_pinboard(details, entry, outfile):  # pylint: disable=w0613
-    """Output a line to the daily note from Pinboard
+    If a Pinboard entry has no tags, it is written as a single line in the daily 
+    journal entry.  If it does have tags, it is output as a source in Obsidian.
 
     :param details: context object
     :param entry: the Website to be output
-    :param outfile: file descriptor used for outputting the line
+    :param daily_fd: file descriptor for the daily journal entry
 
     :returns: file path where the note entry was placed
     """
-    if not details.dry_run:  # pylint: disable=R1705
-        tags = ""
-        if entry.tags and entry.tags != "[]":
-            tags = " #" + ", #".join(json.loads(entry.tags))
 
-        print(f"* [{entry.title}]({entry.href}){tags}", file=outfile)
-        return outfile.name
+    tags = ""
+    if entry.tags and entry.tags != "[]":
+        tag_array = json.loads(entry.tags)
+        tag_array = map(lambda x: x.replace('-', ' '), tag_array)
+        tags = "[[" + "]], [[".join(tag_array) + "]]"
+        source_path, source_filename = obsidian.calc_source_filename(details, entry.title)
+        output_filename = os.path.join(source_path, source_filename) + ".md"
+        obsidian.init_source(details, output_filename, entry.href, entry.archive_date)
+        with details.output_fd(details.obsidian_daily_file) as daily_fd:
+            print(f"* New bookmark: {entry.title}\n", file=daily_fd)
     else:
-        details.logger.info(f"Would have written {entry.href} to daily file")
-        return "dry-run"
+        output_filename = details.obsidian_daily_file
+
+    with details.output_fd(output_filename) as source_fd:
+        print(
+            f"\n[{entry.title}]({entry.href})\n"
+            f"{entry.description}\n"
+            f"{tags}\n", file=source_fd,
+        )
+
+    return output_filename
 
 
-def daily_hypothesis(details, daily_fd):
-    """Output annotations from a Hypothesis source to a file and a
-    line to the daily note from Hypothesis.
+def create_hypothesis_entries(details, daily_fd):
+    """Output annotations from a Hypothesis source into Obsidian
 
     :param details: context object
-    :param outfile: file descriptor used for outputting the line
+    :param entry: the Website to be output
+    :param daily_fd: file descriptor for the daily journal entry
     """
 
     new_sources = set()
@@ -89,18 +98,18 @@ def daily_hypothesis(details, daily_fd):
             details, ann.document_title
         )
         source_path_filename = os.path.join(source_path, source_filename) + ".md"
-        with (
-            os.fdopen(os.dup(sys.stdout.fileno()), "w")
-            if details.dry_run
-            else open(source_path_filename, "a")
-        ) as source_fd:
+        obsidian.init_source(details, source_path_filename, ann.uri, ann.created)
+
+        with (details.output_fd(source_path_filename)) as source_fd:
             tags = ""
             if ann.tags and ann.tags != "[]":
-                tags = ", #" + ", #".join(json.loads(ann.tags))
+                tag_array = json.loads(ann.tags)
+                tag_array = map(lambda x: x.replace('-', ' '), tag_array)
+                tags = "[[" + "]], [[".join(tag_array) + "]]"
             print(
                 f"> {ann.quote}\n\n"
                 f"{ann.annotation}\n"
-                f"[Annotation]({ann.link_incontext}){tags}\n",
+                f"[Annotation]({ann.link_incontext})\n{tags}\n",
                 file=source_fd,
             )
             hypothesis.save_annotation(details, ann.id, source_path_filename)
@@ -108,4 +117,4 @@ def daily_hypothesis(details, daily_fd):
         new_sources.update([source_filename])
 
     for source in new_sources:
-        print(f"* New/updated annotated source: [[{source}]]", file=daily_fd)
+        print(f"* New/updated annotated source: {source}\n", file=daily_fd)
