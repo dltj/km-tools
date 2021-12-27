@@ -15,6 +15,7 @@ from action import twitter, wayback, obsidian, mastodon
 from source import pinboard
 from source import hypothesis
 
+
 class Details:  # pylint: disable=too-few-public-methods
     """Application-specific context"""
 
@@ -70,6 +71,7 @@ class Details:  # pylint: disable=too-few-public-methods
             fd = open(file, "a")
 
         return fd
+
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option("--dry-run", is_flag=True)

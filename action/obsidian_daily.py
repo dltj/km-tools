@@ -13,11 +13,11 @@ def daily(details):
     obsidian_dispatch = {
         "pinboard": create_pinboard_entry,
     }
- 
+
     with details.output_fd(details.obsidian_daily_file) as daily_fd:
         for source_name, source in details.sources.items():
-            if source_name.lower() == 'hypothesis':
-                continue    # Handled later as annotations, not as an individual source
+            if source_name.lower() == "hypothesis":
+                continue  # Handled later as annotations, not as an individual source
             if source_name.lower() not in obsidian_dispatch:
                 details.logger.warning(f"No Obsidian dispatch found for {source_name}.")
                 continue
@@ -44,14 +44,14 @@ def daily(details):
                     )
                 else:
                     details.logger.info(f"Would have saved {entry.href}")
-    
+
         create_hypothesis_entries(details, daily_fd)
 
 
 def create_pinboard_entry(details, entry):  # pylint: disable=w0613
     """Output an entry from Pinboard into Obsidian
 
-    If a Pinboard entry has no tags, it is written as a single line in the daily 
+    If a Pinboard entry has no tags, it is written as a single line in the daily
     journal entry.  If it does have tags, it is output as a source in Obsidian.
 
     :param details: context object
@@ -64,9 +64,11 @@ def create_pinboard_entry(details, entry):  # pylint: disable=w0613
     tags = ""
     if entry.tags and entry.tags != "[]":
         tag_array = json.loads(entry.tags)
-        tag_array = map(lambda x: x.replace('-', ' '), tag_array)
+        tag_array = map(lambda x: x.replace("-", " "), tag_array)
         tags = "[[" + "]], [[".join(tag_array) + "]]"
-        source_path, source_filename = obsidian.calc_source_filename(details, entry.title)
+        source_path, source_filename = obsidian.calc_source_filename(
+            details, entry.title
+        )
         output_filename = os.path.join(source_path, source_filename) + ".md"
         obsidian.init_source(details, output_filename, entry.href, entry.archive_date)
         with details.output_fd(details.obsidian_daily_file) as daily_fd:
@@ -76,9 +78,8 @@ def create_pinboard_entry(details, entry):  # pylint: disable=w0613
 
     with details.output_fd(output_filename) as source_fd:
         print(
-            f"\n[{entry.title}]({entry.href})\n"
-            f"{entry.description}\n"
-            f"{tags}\n", file=source_fd,
+            f"\n[{entry.title}]({entry.href})\n" f"{entry.description}\n" f"{tags}\n",
+            file=source_fd,
         )
 
     return output_filename
@@ -104,7 +105,7 @@ def create_hypothesis_entries(details, daily_fd):
             tags = ""
             if ann.tags and ann.tags != "[]":
                 tag_array = json.loads(ann.tags)
-                tag_array = map(lambda x: x.replace('-', ' '), tag_array)
+                tag_array = map(lambda x: x.replace("-", " "), tag_array)
                 tags = "[[" + "]], [[".join(tag_array) + "]]"
             print(
                 f"> {ann.quote}\n\n"
