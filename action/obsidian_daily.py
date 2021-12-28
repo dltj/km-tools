@@ -1,6 +1,6 @@
 import os
-import sys
 import json
+from datetime import datetime
 import exceptions
 from action import obsidian
 from source import hypothesis
@@ -11,19 +11,24 @@ def daily(details):
 
     # Test to see if daily page already exists
     daily_page = details.obsidian.daily_page_path()
-    if os.path.exists(daily_page):
+    if os.path.exists(daily_page) and not details.dry_run:
         details.logger.warning(f"Daily page {daily_page} already exists.")
         return
 
     # Make daily note navigation
     details.logger.info(f"Creating log file for today")
     with details.output_fd(daily_page) as daily_fh:
-        nav_bar = obsidian.get_link_for_file(details.obsidian.daily_page(offset=-1))
-        nav_bar += " | " + obsidian.get_link_for_file(
-            details.obsidian.daily_page(offset=1)
+        daily_fh.write(f"Weekday:: {datetime.today().strftime('%A')}\n")
+        daily_fh.write(
+            f"Yesterday:: {obsidian.get_link_for_file(details.obsidian.daily_page(offset=-1))}\n"
         )
-        daily_fh.write(nav_bar + "\n\n")
-        daily_fh.write("## Yesterday's readings\n")
+        daily_fh.write(
+            f"Tomorrow:: {obsidian.get_link_for_file(details.obsidian.daily_page(offset=1))}\n"
+        )
+        daily_fh.write(
+            "\n## Morning Notes\n\nDream:: \n\nMorning comments:: \n\nGrateful for:: \n\n"
+        )
+        daily_fh.write("\n## Yesterday's readings\n")
 
     obsidian_db_column = "obsidian_file"
     obsidian_dispatch = {
@@ -62,7 +67,17 @@ def daily(details):
 
     with details.output_fd(daily_page) as daily_fh:
         create_hypothesis_entries(details, daily_fh)
-        daily_fh.write("\n## Daily notes\n")
+        daily_fh.write("\n## Daily notes\n\n\n\n## End-of-day\n\n")
+        for stat in [
+            "Storyworthy",
+            "Positive",
+            "Negative",
+            "Want to improve",
+            "Day rating",
+            "Stress",
+            "Illness",
+        ]:
+            daily_fh.write(f"{stat}:: \n")
 
 
 def create_pinboard_entry(details, entry):  # pylint: disable=w0613
