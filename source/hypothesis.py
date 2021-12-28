@@ -53,7 +53,7 @@ def fetch(details):
 
     for annotation in r.json()["rows"]:
         details.logger.debug(
-            f"Got annotation {annotation['id']}, last updated {annotation['updated']}"
+            f"Got annotation {annotation['id']}, last updated {annotation['updated']}: {annotation=}"
         )
         ## Skip comments on other's annotations
         if "references" in annotation:
@@ -63,6 +63,10 @@ def fetch(details):
         for selector in annotation["target"][0]["selector"]:
             if selector["type"] == "TextQuoteSelector":
                 quote = selector["exact"]
+        if "title" in annotation["document"]:
+            title = annotation["document"]["title"][0]
+        else:
+            title = annotation["uri"].rsplit("/", 1)[-1].rsplit(".", 1)[0]
         values = [
             annotation["id"],
             annotation["uri"],
@@ -71,7 +75,7 @@ def fetch(details):
             annotation["updated"],
             quote,
             json.dumps(annotation["tags"]),
-            annotation["document"]["title"][0],
+            title,
             annotation["links"]["html"],
             annotation["links"]["incontext"],
             int(annotation["hidden"] == True),  # noqa: E712, pylint: disable=C0121
@@ -89,7 +93,7 @@ def fetch(details):
             if not match or (match and match["public"] == 0):
                 values = [
                     annotation["uri"],
-                    annotation["document"]["title"][0],
+                    title,
                     1,  ## Is public
                     "",  # Twitter URL (when posted)
                     "",  # Wayback URL (when saved)
