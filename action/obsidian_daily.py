@@ -93,11 +93,8 @@ def create_pinboard_entry(details, entry):  # pylint: disable=w0613
     :returns: file path where the note entry was placed
     """
 
-    tags = ""
-    if entry.tags and entry.tags != "[]":
-        tag_array = json.loads(entry.tags)
-        tag_array = map(lambda x: x.replace("-", " "), tag_array)
-        tags = "[[" + "]], [[".join(tag_array) + "]]"
+    tags = _format_tags(entry.tags)
+    if len(tags) > 1:
         output_filename = details.obsidian.source_page_path(entry.title)
         obsidian.init_source(
             details,
@@ -134,11 +131,7 @@ def create_hypothesis_entries(details, daily_fh):
         obsidian.init_source(details, output_filename, ann.uri, ann.created)
 
         with (details.output_fd(output_filename)) as source_fh:
-            tags = ""
-            if ann.tags and ann.tags != "[]":
-                tag_array = json.loads(ann.tags)
-                tag_array = map(lambda x: x.replace("-", " "), tag_array)
-                tags = "[[" + "]], [[".join(tag_array) + "]]"
+            tags = _format_tags(ann.tags)
             source_fh.write(
                 f"> {ann.quote}\n\n"
                 f"{ann.annotation}\n"
@@ -150,3 +143,15 @@ def create_hypothesis_entries(details, daily_fh):
 
     for source in new_sources:
         daily_fh.write(f"* New/updated annotated source: [[{source}]]\n")
+
+
+def _format_tags(tags_string):
+    tags = ""
+    if tags_string and tags_string != "[]":
+        tag_array = json.loads(tags_string)
+        # Dash to space
+        tag_array = map(lambda x: x.replace("-", " "), tag_array)
+        # Non hashtags to links
+        tag_array = map(lambda x: f"[[{x}]]" if x[0] == "#" else x)
+        tags = ", ".join(tag_array)
+    return tags
