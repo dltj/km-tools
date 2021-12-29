@@ -95,26 +95,29 @@ def create_pinboard_entry(details, entry):  # pylint: disable=w0613
 
     tags = _format_tags(entry.tags)
     if len(tags) > 1:
-        output_filename = details.obsidian.source_page_path(entry.title)
+        output_path, output_filename, origin = details.obsidian.source_page_path(
+            entry.title
+        )
         obsidian.init_source(
             details,
-            output_filename,
+            output_path,
+            origin,
             entry.href,
             entry.archive_date,
             entry.derived_date,
             entry.summarization,
         )
         with details.output_fd(details.obsidian.daily_page_path()) as daily_fh:
-            daily_fh.write(f"* New bookmark: [[{entry.title}]]\n")
+            daily_fh.write(f"* New bookmark: [[{output_filename}]] ({origin})\n")
     else:
-        output_filename = details.obsidian.daily_page_path()
+        output_path = details.obsidian.daily_page_path()
 
-    with details.output_fd(output_filename) as source_fh:
+    with details.output_fd(output_path) as source_fh:
         source_fh.write(
             f"\n[{entry.title}]({entry.href})\n" f"{entry.description}\n" f"{tags}\n"
         )
 
-    return output_filename
+    return output_path
 
 
 def create_hypothesis_entries(details, daily_fh):
@@ -127,19 +130,21 @@ def create_hypothesis_entries(details, daily_fh):
 
     new_sources = set()
     for ann in hypothesis.get_new_annotations(details):
-        output_filename = details.obsidian.source_page_path(ann.document_title)
-        obsidian.init_source(details, output_filename, ann.uri, ann.created)
+        output_path, output_filename, origin = details.obsidian.source_page_path(
+            ann.document_title
+        )
+        obsidian.init_source(details, output_path, origin, ann.uri, ann.created)
 
-        with (details.output_fd(output_filename)) as source_fh:
+        with (details.output_fd(output_path)) as source_fh:
             tags = _format_tags(ann.tags)
             source_fh.write(
                 f"> {ann.quote}\n\n"
                 f"{ann.annotation}\n"
                 f"[Annotation]({ann.link_incontext})\n{tags}\n"
             )
-            hypothesis.save_annotation(details, ann.id, output_filename)
+            hypothesis.save_annotation(details, ann.id, output_path)
             details.logger.info(f"Saved annotation {ann.id} to {ann.document_title}")
-        new_sources.update([ann.document_title])
+        new_sources.update([output_filename])
 
     for source in new_sources:
         daily_fh.write(f"* New/updated annotated source: [[{source}]]\n")
@@ -152,6 +157,6 @@ def _format_tags(tags_string):
         # Dash to space
         tag_array = map(lambda x: x.replace("-", " "), tag_array)
         # Non hashtags to links
-        tag_array = map(lambda x: f"[[{x}]]" if x[0] == "#" else x)
+        tag_array = map(lambda x: f"[[{x}]]" if x[0] != "#" else x, tag_array)
         tags = ", ".join(tag_array)
     return tags

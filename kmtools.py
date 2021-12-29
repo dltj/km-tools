@@ -61,6 +61,7 @@ class Details:  # pylint: disable=too-few-public-methods
         return: file descriptor, stdout when dry_run, otherwise append file
         """
         if self.dry_run:
+            click.secho(f">>> Would write to {file} >>>", fg="green")
             fd = os.fdopen(os.dup(sys.stdout.fileno()), "w")
         else:
             fd = open(file, "a")

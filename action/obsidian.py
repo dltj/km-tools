@@ -50,14 +50,23 @@ class Obsidian:
     def source_page_path(self, source_title):
         """Get the full path to a source page in the Obsidian database.
 
-        This method will remove problematic characters from the title to make it into a file name.
+        This method will remove problematic characters from the title to make it into a file name. It also attempts to guess the origin of the source by splitting on '|'.
 
         :param source_title: Source page name
 
-        :returns: Full path to the page in the Obsidian database
+        :returns:
+            - Full path to the page in the Obsidian database
+            - Filename portion of page path
+            - Origin of the source (e.g. "Washington Post")
         """
-        filename = source_title.split("|")[0].strip().replace(":", "").replace("/", "-")
-        return self.page_to_path(filename, folder="source")
+        if "|" in source_title:
+            filename, origin = source_title.split("|", 1)
+            filename = filename.strip().replace(":", "").replace("/", "-")
+            origin = origin.strip()
+        else:
+            filename = source_title
+            origin = ""
+        return self.page_to_path(filename, folder="source"), filename, origin
 
     def page_to_path(self, page, folder=None):
         """Return the full path of a page in the Obsidian database.
@@ -74,12 +83,17 @@ class Obsidian:
         return os.path.join(self.db_directory, folder, page + ".md")
 
 
-def init_source(details, source_path_filename, url, created, derived_date, summary):
+def init_source(
+    details, source_path_filename, origin, url, created, derived_date, summary
+):
     """If necessary, create a new source file in Obsidian and write the source's metadata
 
-    :param source_path_filename: location of the Obsidian source
+    :param source_path_filename: location source inside Obsidian database
+    :param origin: the originating website (e.g. "Washington Post")
     :param url: link to web source
     :param created: creation date for the source as string
+    :param derived_date: presumed date of source publication
+    :param summary: machine-generated summary of source
 
     :returns: None
     """
@@ -87,9 +101,10 @@ def init_source(details, source_path_filename, url, created, derived_date, summa
         with details.output_fd(source_path_filename) as source_fd:
             source_fd.write(
                 "---\n"
-                f"url: {url}\n"
+                f"source_url: {url}\n"
                 f"bookmark_saved: {created}\n"
-                f"webpage_created: {derived_date}\n"
+                f"source_created: {derived_date}\n"
+                f"origin: {origin}\n"
                 "---\n"
                 f"Automated summary:: {summary}\n\n"
             )
