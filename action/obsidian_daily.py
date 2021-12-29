@@ -108,7 +108,7 @@ def create_pinboard_entry(details, entry):  # pylint: disable=w0613
             entry.summarization,
         )
         with details.output_fd(details.obsidian.daily_page_path()) as daily_fh:
-            daily_fh.write(f"* New bookmark: {entry.title}\n")
+            daily_fh.write(f"* New bookmark: [[{entry.title}]]\n")
     else:
         output_filename = details.obsidian.daily_page_path()
 
@@ -149,4 +149,4 @@ def create_hypothesis_entries(details, daily_fh):
         new_sources.update([ann.document_title])
 
     for source in new_sources:
-        daily_fh.write(f"* New/updated annotated source: {source}\n")
+        daily_fh.write(f"* New/updated annotated source: [[{source}]]\n")
