@@ -74,7 +74,7 @@ class Obsidian:
         return os.path.join(self.db_directory, folder, page + ".md")
 
 
-def init_source(details, source_path_filename, url, created):
+def init_source(details, source_path_filename, url, created, derived_date, summary):
     """If necessary, create a new source file in Obsidian and write the source's metadata
 
     :param source_path_filename: location of the Obsidian source
@@ -85,9 +85,13 @@ def init_source(details, source_path_filename, url, created):
     """
     if not os.path.exists(source_path_filename):
         with details.output_fd(source_path_filename) as source_fd:
-            print(
-                "---\n" f"url: {url}\n" f"bookmark_saved: {created}\n" "---\n",
-                file=source_fd,
+            source_fd.write(
+                "---\n"
+                f"url: {url}\n"
+                f"bookmark_saved: {created}\n"
+                f"webpage_created: {derived_date}\n"
+                "---\n"
+                f"Automated summary:: {summary}\n\n"
             )
     return
 

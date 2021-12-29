@@ -70,6 +70,8 @@ def fetch(details):
             "",  # archive_url
             "",  # obsidian file path
             "",  # mastodon url
+            "",  # derived date
+            "",  # summarization
         ]
 
         query = f"REPLACE INTO pinb_posts VALUES ({','.join('?' * len(values))})"
@@ -94,6 +96,8 @@ def find_entry(details, href):
             None,
             row["archive_url"],
             row["time"],
+            row["derived_date"],
+            row["summarization"],
         )
         if search_cur.fetchone():
             raise exceptions.MoreThanOneError
@@ -119,6 +123,8 @@ def new_entries(details, db_column):
             None,
             row["archive_url"],
             row["time"],
+            row["derived_date"],
+            row["summarization"],
         )
         new_rows.append(webpage)
 
@@ -153,6 +159,22 @@ def get_wayback_jobs(details):
     return job_entries
 
 
+def get_unsummarized(details):
+    """Return URLs of rows that do not have summaries
+
+    :returns: list of URLs
+    """
+
+    unsummarized_entries = []
+    db = details.kmtools_db
+    search_cur = db.cursor()
+    query = "SELECT * FROM pinb_posts WHERE LENGTH(summarization)<1 ORDER BY time"
+    for row in search_cur.execute(query):
+        unsummarized_entries.append(row["href"])
+
+    return unsummarized_entries
+
+
 """
 CREATE TABLE pinb_posts (
    hash TEXT PRIMARY KEY,
@@ -167,6 +189,8 @@ CREATE TABLE pinb_posts (
    tweet_url TEXT,
    archive_url TEXT,
    obsidian_date TEXT,
-   toot_url TEXT
+   toot_url TEXT,
+   derived_date TEXT,
+   summarization TEXT
 );
 """

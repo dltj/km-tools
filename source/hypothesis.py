@@ -99,8 +99,10 @@ def fetch(details):
                     "",  # Wayback URL (when saved)
                     "",  # Mastodon URL (when tooted)
                     datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z"),
+                    "",  # derived date
+                    "",  # summarization
                 ]
-                query = "REPLACE INTO hyp_pages VALUES (?, ?, ?, ?, ?, ?, ?)"
+                query = f"REPLACE INTO hyp_pages VALUES ({','.join('?' * len(values))})"
                 replace_cur.execute(query, values)
                 details.logger.debug("Added to pages table.")
 
@@ -127,6 +129,8 @@ def find_entry(details, href):
             f"https://via.hypothes.is/{row['uri']}",
             row["archive_url"],
             row["time"],
+            row["derived_date"],
+            row["summarization"],
         )
         if search_cur.fetchone():
             raise exceptions.MoreThanOneError
@@ -152,6 +156,8 @@ def new_entries(details, db_column):
             f"https://via.hypothes.is/{row['uri']}",
             row["archive_url"],
             row["time"],
+            row["derived_date"],
+            row["summarization"],
         )
         new_rows.append(webpage)
 
@@ -233,6 +239,22 @@ def save_annotation(details, uri, location):
     db.commit()
 
 
+def get_unsummarized(details):
+    """Return URLs of rows that do not have summaries
+
+    :returns: list of URLs
+    """
+
+    unsummarized_entries = []
+    db = details.kmtools_db
+    search_cur = db.cursor()
+    query = "SELECT * FROM hyp_pages WHERE LENGTH(summarization)<1 ORDER BY time"
+    for row in search_cur.execute(query):
+        unsummarized_entries.append(row["uri"])
+
+    return unsummarized_entries
+
+
 """
 CREATE TABLE hyp_posts (
 	id TEXT PRIMARY KEY,
@@ -255,7 +277,10 @@ CREATE TABLE hyp_pages (
 	public INTEGER DEFAULT 0,
 	tweet_url TEXT,
 	archive_url TEXT,
-   toot_url TEXT
+    toot_url TEXT,
+    time TEXT,
+    derived_date TEXT,
+    summarization TEXT
 );
 
 CREATE TABLE hyp_posts_pages_map (

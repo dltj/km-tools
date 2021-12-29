@@ -99,7 +99,14 @@ def create_pinboard_entry(details, entry):  # pylint: disable=w0613
         tag_array = map(lambda x: x.replace("-", " "), tag_array)
         tags = "[[" + "]], [[".join(tag_array) + "]]"
         output_filename = details.obsidian.source_page_path(entry.title)
-        obsidian.init_source(details, output_filename, entry.href, entry.archive_date)
+        obsidian.init_source(
+            details,
+            output_filename,
+            entry.href,
+            entry.archive_date,
+            entry.derived_date,
+            entry.summarization,
+        )
         with details.output_fd(details.obsidian.daily_page_path()) as daily_fh:
             daily_fh.write(f"* New bookmark: {entry.title}\n")
     else:

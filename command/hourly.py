@@ -4,6 +4,7 @@ from action import wayback
 from source import pinboard
 from source import hypothesis
 import exceptions
+from command import summarize
 
 
 @click.command()
@@ -37,6 +38,28 @@ def hourly(details):
                 details.logger.info(
                     f"Successfully handled {row.href} from {source_name} for {action_name}"
                 )
+
+    unsummarized_urls = pinboard.get_unsummarized(details)
+    for url in unsummarized_urls:
+        details.logger.debug(f"Getting summarization for {url}")
+        derived_date, summarization = summarize.summarize(details, url)
+        if derived_date:
+            details.logger.debug(f"Saving derived date of {derived_date} for {url}")
+            pinboard.save_entry(details, "derived_date", url, derived_date)
+        if summarization:
+            details.logger.debug(f"Saving summary for {url}")
+            pinboard.save_entry(details, "summarization", url, summarization)
+
+    unsummarized_urls = hypothesis.get_unsummarized(details)
+    for url in unsummarized_urls:
+        details.logger.debug(f"Getting summarization for {url}")
+        derived_date, summarization = summarize.summarize(details, url)
+        if derived_date:
+            details.logger.debug(f"Saving derived date of {derived_date} for {url}")
+            hypothesis.save_entry(details, "derived_date", url, derived_date)
+        if summarization:
+            details.logger.debug(f"Saving summary for {url}")
+            hypothesis.save_entry(details, "summarization", url, summarization)
 
     # FIXME: These should probably be done in a "clean-up" on the actions
     wayback_jobs = hypothesis.get_wayback_jobs(details)

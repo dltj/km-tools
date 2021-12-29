@@ -12,6 +12,8 @@ omegaconf = "*"
 requests = "*"
 "mastodon.py" = "*"
 arrow = "*"
+trafilatura = "*"
+nltk = "*"
 
 [dev-packages]
 jedi = "*"
