@@ -1,5 +1,6 @@
 import os
 import json
+import re
 from datetime import datetime
 import exceptions
 from action import obsidian
@@ -104,11 +105,17 @@ def create_pinboard_entry(details, entry):  # pylint: disable=w0613
     :returns: file path where the note entry was placed
     """
 
+    title_scan = re.compile("(.*?)\s+\[(.*?)\]\s+(.*)")
+    if (match := title_scan.match(entry.title)) is not None:
+        title = f"{match.group(1)} {match.group(3)}"
+        description = f"{match.group(2)}\n\n{entry.description}"
+    else:
+        title = entry.title
+        description = entry.description
+
     tags = _format_tags(entry.tags)
     if len(tags) > 1:
-        output_path, output_filename, origin = details.obsidian.source_page_path(
-            entry.title
-        )
+        output_path, output_filename, origin = details.obsidian.source_page_path(title)
         obsidian.init_source(
             details,
             output_path,
@@ -120,13 +127,13 @@ def create_pinboard_entry(details, entry):  # pylint: disable=w0613
         )
         with details.output_fd(details.obsidian.daily_page_path()) as daily_fh:
             daily_fh.write(f"* New bookmark: [[{output_filename}]] ({origin})\n")
+        prefix = ""
     else:
         output_path = details.obsidian.daily_page_path()
+        prefix = "* "
 
     with details.output_fd(output_path) as source_fh:
-        source_fh.write(
-            f"\n[{entry.title}]({entry.href})\n" f"{entry.description}\n" f"{tags}\n"
-        )
+        source_fh.write(f"{prefix}[{title}]({entry.href})\n{description}\n{tags}\n")
 
     return output_path
 
