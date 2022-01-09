@@ -18,18 +18,29 @@ def daily(details):
     # Make daily note navigation
     details.logger.info(f"Creating log file for today")
     with details.output_fd(daily_page) as daily_fh:
-        daily_fh.write(f"Weekday:: {datetime.today().strftime('%A')}\n")
         daily_fh.write(
-            f"Yesterday:: {obsidian.get_link_for_file(details.obsidian.daily_page(offset=-1))}\n"
-        )
-        daily_fh.write(
-            f"Tomorrow:: {obsidian.get_link_for_file(details.obsidian.daily_page(offset=1))}\n"
-        )
-        daily_fh.write(
-            "\n## Morning Notes\n\nDream:: \n\nMorning comments:: \n\nGrateful for:: \n\n"
-        )
-        daily_fh.write("\n## Yesterday's readings\n")
+            f"""---
+type: Daily note
+---
+Weekday:: {datetime.today().strftime('%A')}
+Two weeks ago:: {obsidian.get_link_for_file(details.obsidian.daily_page(offset=-14))}
+Last week:: {obsidian.get_link_for_file(details.obsidian.daily_page(offset=-7))}
+Yesterday:: {obsidian.get_link_for_file(details.obsidian.daily_page(offset=-1))}
+Tomorrow:: {obsidian.get_link_for_file(details.obsidian.daily_page(offset=1))}
 
+## Tags for Today
+```dataview
+LIST FROM #{datetime.today().strftime('%d-%b')} 
+```
+
+## Morning Notes
+Dream:: 
+Morning comments:: 
+Grateful for:: 
+
+## Yesterday's readings
+"""
+        )
     obsidian_db_column = "obsidian_file"
     obsidian_dispatch = {
         "pinboard": create_pinboard_entry,
