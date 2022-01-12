@@ -149,9 +149,7 @@ def get_wayback_jobs(details):
 
     db = details.kmtools_db
     search_cur = db.cursor()
-    query = (
-        "SELECT * FROM pinb_posts WHERE archive_url NOT LIKE 'https://web.archive.org%'"
-    )
+    query = "SELECT * FROM pinb_posts WHERE archive_url NOT LIKE 'https://web.archive.org%' AND archive_url NOT LIKE 'https://archive.is%'"
 
     for row in search_cur.execute(query):
         job_entries.append(row["archive_url"])
