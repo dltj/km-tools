@@ -7,9 +7,12 @@ import nltk
 
 
 @click.command(name="summarize")
+@click.option(
+    "-q", "--quiet", is_flag=True, default=False, help="Output just the summary"
+)
 @click.argument("url")
 @click.pass_obj
-def summarize_command(details, url=None):
+def summarize_command(details, url=None, quiet=False):
     """Output a summarization of the specified URL
 
     :param details: Context object
@@ -17,10 +20,11 @@ def summarize_command(details, url=None):
     """
     if url:
         derived_date, summarization = summarize(details, url)
-        click.echo(
-            f"The webpage at {url} was published on {derived_date}. "
-            f"It can be summarized as follows\n{summarization}\n"
-        )
+        if not quiet:
+            click.echo(
+                f"The webpage at {url} was published on {derived_date}. It can be summarized as follows\n"
+            )
+        click.echo(summarization)
     else:
         click.echo("No URL submitted.")
 
@@ -35,12 +39,16 @@ def summarize(details, url):
     )
     if metadata and metadata["date"]:
         derived_date = metadata["date"]
+    else:
+        derived_date = "unknown"
+
     raw_text = trafilatura.extract(
         downloaded,
         favor_precision=True,
         output_format="txt",
         include_tables=False,
     )
+    details.logger.debug(f"{raw_text=}")
 
     # Removing special characters and digits
     normalized_raw_text = re.sub("[^a-zA-Z]", " ", raw_text)
