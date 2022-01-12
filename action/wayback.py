@@ -64,7 +64,7 @@ def save_url(details, url=None, discard1=None, discard2=None):
     """
 
     ## This conditional effectively skips saving Internet Archive URLs into wayback
-    if url.startswith("https://archive.org/"):
+    if url.startswith("https://archive.org/") or url.startswith("https://archive.is/"):
         return url
 
     wayback_headers = {
@@ -140,6 +140,9 @@ def check_job(details, job_id=None):
             "details",
         ],
     )
+    if not job_id or len(job_id) == 0:
+        return
+
     if not details.dry_run:  # pylint: disable=R1720
         r = requests.get(wayback_endpoint, headers=wayback_headers)
         details.logger.debug(f"Returned status {r.status_code}, '{r.text}'")
