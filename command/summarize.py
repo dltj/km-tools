@@ -51,6 +51,10 @@ def summarize(details, url):
     details.logger.debug(f"{raw_text=}")
 
     # Removing special characters and digits
+    if raw_text is None:
+        details.logger.info(f"No summarization from {url}")
+        return None, None
+
     normalized_raw_text = re.sub("[^a-zA-Z]", " ", raw_text)
     normalized_raw_text = re.sub(r"s+", " ", normalized_raw_text)
 
