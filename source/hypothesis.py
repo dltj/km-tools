@@ -1,9 +1,11 @@
-import json
 import datetime
-import requests
+import json
+
 import click
 import exceptions
-from source import Source, Webpage, Annotation
+import requests
+
+from source import Annotation, Source, Webpage
 
 
 @click.group()
@@ -60,9 +62,12 @@ def fetch(details):
             details.logger.debug(f"Skipping...reference to {annotation['references']}")
             continue
 
-        for selector in annotation["target"][0]["selector"]:
-            if selector["type"] == "TextQuoteSelector":
-                quote = selector["exact"]
+        if "selector" in annotation["target"][0]:
+            for selector in annotation["target"][0]["selector"]:
+                if selector["type"] == "TextQuoteSelector":
+                    quote = selector["exact"]
+        else:
+            quote = ""
         if "title" in annotation["document"]:
             title = annotation["document"]["title"][0]
         else:

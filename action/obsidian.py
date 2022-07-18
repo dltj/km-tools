@@ -1,6 +1,8 @@
 import os
-import click
+
 import arrow
+import click
+
 from action import obsidian_daily
 
 
@@ -61,7 +63,7 @@ class Obsidian:
         """
         if "|" in source_title:
             filename, origin = source_title.split("|", 1)
-            filename = filename.strip().replace(":", "").replace("/", "-")
+            filename = filename.strip().replace(":", "—").replace("/", "-")
             origin = origin.strip()
         else:
             filename = source_title
@@ -100,7 +102,7 @@ def init_source(
     if not os.path.exists(source_path_filename):
         with details.output_fd(source_path_filename) as source_fd:
             source_fd.write(
-                "---\n"
+                "---\ntype: Source\n"
                 f"source_url: {url}\n"
                 f"bookmark_saved: {created}\n"
                 f"source_created: {derived_date}\n"

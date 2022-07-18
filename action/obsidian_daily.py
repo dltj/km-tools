@@ -1,10 +1,12 @@
-import os
 import json
+import os
 import re
 from datetime import datetime
+
 import exceptions
-from action import obsidian
 from source import hypothesis
+
+from action import obsidian
 
 
 def daily(details):
@@ -127,13 +129,13 @@ def create_pinboard_entry(details, entry):  # pylint: disable=w0613
         )
         with details.output_fd(details.obsidian.daily_page_path()) as daily_fh:
             daily_fh.write(f"* New bookmark: [[{output_filename}]] ({origin})\n")
-        prefix = ""
+        detail_output = f"[{title}]({entry.href})\n{description}\nConcepts:: {tags}\n"
     else:
         output_path = details.obsidian.daily_page_path()
-        prefix = "* "
+        detail_output = f"* [{title}]({entry.href}): {description}"
 
     with details.output_fd(output_path) as source_fh:
-        source_fh.write(f"{prefix}[{title}]({entry.href})\n{description}\n{tags}\n")
+        source_fh.write(detail_output)
 
     return output_path
 
@@ -151,7 +153,16 @@ def create_hypothesis_entries(details, daily_fh):
         output_path, output_filename, origin = details.obsidian.source_page_path(
             ann.document_title
         )
-        obsidian.init_source(details, output_path, origin, ann.uri, ann.created)
+        webpage = hypothesis.find_entry(details, ann.uri)
+        obsidian.init_source(
+            details,
+            output_path,
+            origin,
+            ann.uri,
+            ann.created,
+            webpage.derived_date,
+            webpage.summarization,
+        )
 
         with (details.output_fd(output_path)) as source_fh:
             tags = _format_tags(ann.tags)
@@ -160,7 +171,8 @@ def create_hypothesis_entries(details, daily_fh):
                 f"{ann.annotation}\n"
                 f"[Annotation]({ann.link_incontext})\n{tags}\n"
             )
-            hypothesis.save_annotation(details, ann.id, output_path)
+            if not details.dry_run:
+                hypothesis.save_annotation(details, ann.id, output_path)
             details.logger.info(f"Saved annotation {ann.id} to {ann.document_title}")
         new_sources.update([output_filename])
 
