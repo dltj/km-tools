@@ -5,7 +5,7 @@ import click
 import exceptions
 import requests
 
-from source import Annotation, Source, Webpage
+from source import Annotation, OriginTuple, Webpage
 
 
 @click.group()
@@ -20,8 +20,8 @@ def fetch_command(details):
     return fetch(details)
 
 
-def register_source():
-    return Source(new_entries, save_entry)
+def register_origin():
+    return OriginTuple(new_entries, save_entry)
 
 
 def fetch(details):

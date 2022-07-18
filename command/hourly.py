@@ -1,31 +1,31 @@
 """ Sources and actions to perform hourly """
 import click
-from action import wayback
-from source import pinboard
-from source import hypothesis
 import exceptions
+from action import wayback
+from source import hypothesis, pinboard
+
 from command import summarize
 
 
 @click.command()
 @click.pass_obj
 def hourly(details):
-    """Perform the hourly gathering from sources and action activations"""
+    """Perform the hourly gathering from origins and action activations"""
 
     pinboard.fetch(details)
     hypothesis.fetch(details)
 
     for action_name, action in details.actions.items():
-        for source_name, source in details.sources.items():
+        for origin_name, origin in details.origins.items():
             action_name = action_name.upper()
-            source_name = source_name.upper()
-            new_entries = source.new_entries_handler(details, action.db_column)
+            origin_name = origin_name.upper()
+            new_entries = origin.new_entries_handler(details, action.db_column)
             details.logger.info(
-                f"Found {len(new_entries)} new entries from {source_name} for {action_name}"
+                f"Found {len(new_entries)} new entries from {origin_name} for {action_name}"
             )
             for row in new_entries:
                 details.logger.debug(
-                    f"New from {source_name} for {action_name}: {row.title} ({row.href})"
+                    f"New from {origin_name} for {action_name}: {row.title} ({row.href})"
                 )
                 try:
                     result = action.action_handler(
@@ -34,9 +34,9 @@ def hourly(details):
                 except exceptions.KMException as err:
                     details.logger.error(err)
                     raise SystemExit from err
-                source.save_entry_handler(details, action.db_column, row.href, result)
+                origin.save_entry_handler(details, action.db_column, row.href, result)
                 details.logger.info(
-                    f"Successfully handled {row.href} from {source_name} for {action_name}"
+                    f"Successfully handled {row.href} from {origin_name} for {action_name}"
                 )
 
     unsummarized_urls = pinboard.get_unsummarized(details)

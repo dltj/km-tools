@@ -1,6 +1,6 @@
 import collections
 
-Source = collections.namedtuple(
+OriginTuple = collections.namedtuple(
     "Source",
     [
         "new_entries_handler",

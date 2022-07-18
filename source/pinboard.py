@@ -2,8 +2,8 @@ import json
 import click
 import dateutil.parser
 import requests
-import exceptions
-from source import Source, Webpage
+from source import OriginTuple, SourceObject, Webpage, WebResourceObject
+
 
 
 @click.group()
@@ -18,8 +18,8 @@ def fetch_command(details):
     return fetch(details)
 
 
-def register_source():
-    return Source(new_entries, save_entry)
+def register_origin():
+    return OriginTuple(new_entries, save_entry)
 
 
 def fetch(details):

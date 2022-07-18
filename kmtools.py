@@ -2,18 +2,19 @@
 # encoding: utf-8
 """Knowledge Management CLI."""
 
-import sys
-import os
-import arrow
 import logging
+import os
 import sqlite3
+import sys
 from logging.handlers import TimedRotatingFileHandler
+
+import arrow
 import click
 from omegaconf import OmegaConf
-from command import hourly, daily, robustify, summarize
-from action import twitter, wayback, obsidian, mastodon
-from source import pinboard
-from source import hypothesis
+
+from action import mastodon, obsidian, twitter, wayback
+from command import daily, hourly, robustify, summarize
+from source import hypothesis, pinboard
 
 
 class Details:  # pylint: disable=too-few-public-methods
@@ -24,13 +25,13 @@ class Details:  # pylint: disable=too-few-public-methods
         logger_handle=None,
         dry_run=False,
         config=None,
-        sources=None,
+        origins=None,
         actions=None,
     ):
         self.logger = logger_handle
         self.dry_run = dry_run
         self.config = config
-        self.sources = sources
+        self.origins = origins
         self.actions = actions
         self.kmtools_db_conn = None
         self.obsidian = obsidian.Obsidian(
@@ -115,9 +116,9 @@ def cli(ctx, dry_run, debug, verbose, logfile):
         log.setLevel(logging.WARNING)
 
     # Register source dispatchers
-    sources = {}
-    sources["Pinboard"] = pinboard.register_source()
-    sources["Hypothesis"] = hypothesis.register_source()
+    origins = {}
+    origins["Pinboard"] = pinboard.register_origin()
+    origins["Hypothesis"] = hypothesis.register_origin()
 
     # Register actions
     actions = {}
@@ -125,7 +126,7 @@ def cli(ctx, dry_run, debug, verbose, logfile):
     actions["Wayback"] = wayback.register_hourly_action()
     actions["Mastodon"] = mastodon.register_hourly_action()
 
-    ctx.obj = Details(log, dry_run, config, sources, actions)
+    ctx.obj = Details(log, dry_run, config, origins, actions)
 
 
 # Register commands

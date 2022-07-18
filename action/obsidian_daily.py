@@ -49,7 +49,7 @@ Grateful for::
         "pinboard": create_pinboard_entry,
     }
 
-    for source_name, source in details.sources.items():
+    for source_name, source in details.origins.items():
         if source_name.lower() == "hypothesis":
             continue  # Handled later as annotations, not as an individual source
         if source_name.lower() not in obsidian_dispatch:
@@ -117,18 +117,20 @@ def create_pinboard_entry(details, entry):  # pylint: disable=w0613
 
     tags = _format_tags(entry.tags)
     if len(tags) > 1:
-        output_path, output_filename, origin = details.obsidian.source_page_path(title)
+        output_path, output_filename, publisher = details.obsidian.source_page_path(
+            title
+        )
         obsidian.init_source(
             details,
             output_path,
-            origin,
+            publisher,
             entry.href,
             entry.archive_date,
             entry.derived_date,
             entry.summarization,
         )
         with details.output_fd(details.obsidian.daily_page_path()) as daily_fh:
-            daily_fh.write(f"* New bookmark: [[{output_filename}]] ({origin})\n")
+            daily_fh.write(f"* New bookmark: [[{output_filename}]] ({publisher})\n")
         detail_output = f"[{title}]({entry.href})\n{description}\nConcepts:: {tags}\n"
     else:
         output_path = details.obsidian.daily_page_path()
@@ -150,14 +152,14 @@ def create_hypothesis_entries(details, daily_fh):
 
     new_sources = set()
     for ann in hypothesis.get_new_annotations(details):
-        output_path, output_filename, origin = details.obsidian.source_page_path(
+        output_path, output_filename, publisher = details.obsidian.source_page_path(
             ann.document_title
         )
         webpage = hypothesis.find_entry(details, ann.uri)
         obsidian.init_source(
             details,
             output_path,
-            origin,
+            publisher,
             ann.uri,
             ann.created,
             webpage.derived_date,
