@@ -85,7 +85,7 @@ def save_url(details, url=None, discard1=None, discard2=None):
     )
     wayback_headers[
         "Authorization"
-    ] = f"LOW {details.config.wayback.access_key}:{details.config.wayback.secret_key}"
+    ] = f"LOW {details.settings.wayback.access_key}:{details.settings.wayback.secret_key}"
 
     if not details.dry_run:  # pylint: disable=R1720
         r = requests.post(wayback_endpoint, headers=wayback_headers, data=wayback_body)
@@ -127,7 +127,7 @@ def check_job(details, job_id=None):
     )
     wayback_headers[
         "Authorization"
-    ] = f"LOW {details.config.wayback.access_key}:{details.config.wayback.secret_key}"
+    ] = f"LOW {details.settings.wayback.access_key}:{details.settings.wayback.secret_key}"
 
     Wayback = collections.namedtuple(
         "Wayback",

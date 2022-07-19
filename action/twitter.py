@@ -1,7 +1,8 @@
 """Post to Twitter"""
-from TwitterAPI import TwitterAPI
-from action import ActionTuple
 import exceptions
+from TwitterAPI import TwitterAPI
+
+from action import ActionTuple
 
 
 def register_hourly_action():
@@ -11,10 +12,10 @@ def register_hourly_action():
 def tweet_entry(details, url=None, text=None, annotation_url=None):
     """Post to Twitter"""
     twiter_api = TwitterAPI(
-        details.config.twitter.consumer_key,
-        details.config.twitter.consumer_secret,
-        details.config.twitter.access_token_key,
-        details.config.twitter.access_token_secret,
+        details.settings.twitter.consumer_key,
+        details.settings.twitter.consumer_secret,
+        details.settings.twitter.access_token_key,
+        details.settings.twitter.access_token_secret,
     )
 
     short_url_length = 23

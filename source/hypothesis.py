@@ -33,7 +33,7 @@ def fetch(details):
     params = {
         "sort": "updated",
         "order": "asc",
-        "user": details.config.hypothesis.user,
+        "user": details.settings.hypothesis.user,
     }
 
     db = details.kmtools_db
@@ -44,7 +44,7 @@ def fetch(details):
         params["search_after"] = since_date
 
     details.logger.debug(f"Calling Hypothesis with {headers} (plus auth) and {params}")
-    headers["Authorization"] = f"Bearer {details.config.hypothesis.api_token}"
+    headers["Authorization"] = f"Bearer {details.settings.hypothesis.api_token}"
 
     r = requests.get("https://api.hypothes.is/api/search", params=params)
     if r.status_code > 200:

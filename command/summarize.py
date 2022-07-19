@@ -1,9 +1,11 @@
 """Call summarization routines."""
-import re
 import heapq
+import re
+
 import click
-import trafilatura
 import nltk
+import trafilatura
+from config import config
 
 
 @click.command(name="summarize")
@@ -48,11 +50,11 @@ def summarize(details, url):
         output_format="txt",
         include_tables=False,
     )
-    details.logger.debug(f"{raw_text=}")
+    config.logger.debug(f"{raw_text=}")
 
     # Removing special characters and digits
     if raw_text is None:
-        details.logger.info(f"No summarization from {url}")
+        config.logger.info(f"No summarization from {url}")
         return None, None
 
     normalized_raw_text = re.sub("[^a-zA-Z]", " ", raw_text)

@@ -1,7 +1,8 @@
 """Post to Mastodon"""
 import click
-from mastodon import Mastodon
+
 from action import ActionTuple
+from mastodon import Mastodon
 
 
 @click.group()
@@ -35,10 +36,10 @@ def register_hourly_action():
 def toot_entry(details, url=None, text=None, annotation_url=None):
     """Post to Mastodon"""
     mastodon_client = Mastodon(
-        client_id=details.config.mastodon.client_id,
-        client_secret=details.config.mastodon.client_secret,
-        access_token=details.config.mastodon.access_token,
-        api_base_url=details.config.mastodon.api_base_url,
+        client_id=details.settings.mastodon.client_id,
+        client_secret=details.settings.mastodon.client_secret,
+        access_token=details.settings.mastodon.access_token,
+        api_base_url=details.settings.mastodon.api_base_url,
     )
 
     annotation_length = 0

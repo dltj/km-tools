@@ -1,8 +1,13 @@
 import json
+
 import click
 import dateutil.parser
+import exceptions
 import requests
-from source import OriginTuple, SourceObject, Webpage, WebResourceObject
+from config import config
+
+from source import Origin, OriginTuple, Webpage, WebResource
+
 
 
 
@@ -13,23 +18,23 @@ def pinboard():
 
 @pinboard.command(name="fetch")
 @click.pass_obj
-def fetch_command(details):
+def fetch_command(ctx_obj):
     """Retrieve annotations"""
-    return fetch(details)
+    return fetch(ctx_obj)
 
 
 def register_origin():
     return OriginTuple(new_entries, save_entry)
 
 
-def fetch(details):
+def fetch(ctx_obj):
     """Update local Pinboard database"""
 
     params = {
         "format": "json",
     }
 
-    db = details.kmtools_db
+    db = ctx_obj.kmtools_db
 
     since_cur = db.cursor()
     since_date = since_cur.execute("SELECT max(time) FROM pinb_posts;").fetchone()[0]
@@ -41,18 +46,18 @@ def fetch(details):
             + "Z"
         )
 
-    details.logger.debug(f"Calling Pinboard with {params} (plus auth)")
-    params["auth_token"] = details.config.pinboard.auth_token
+    ctx_obj.logger.debug(f"Calling Pinboard with {params} (plus auth)")
+    params["auth_token"] = ctx_obj.settings.pinboard.auth_token
 
     r = requests.get("https://api.pinboard.in/v1/posts/all", params=params)
     if r.status_code > 200:
-        details.logger.debug(f"Couldn't call Pinboard: ({r.status_code}): {r.text}")
+        ctx_obj.logger.debug(f"Couldn't call Pinboard: ({r.status_code}): {r.text}")
         raise exceptions.PinboardError(r.status_code, r.text)
 
     replace_cur = db.cursor()
 
     for bookmark in r.json():
-        details.logger.debug(
+        ctx_obj.logger.debug(
             f"Got annotation {bookmark['href']}, last updated {bookmark['time']}"
         )
 
@@ -76,7 +81,7 @@ def fetch(details):
 
         query = f"REPLACE INTO pinb_posts VALUES ({','.join('?' * len(values))})"
         replace_cur.execute(query, values)
-        details.logger.info(f"Added {bookmark['href']} from {bookmark['time']}.")
+        ctx_obj.logger.info(f"Added {bookmark['href']} from {bookmark['time']}.")
         db.commit()
 
 
