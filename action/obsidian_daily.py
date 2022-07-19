@@ -5,15 +5,15 @@ from datetime import datetime
 
 import exceptions
 from source import hypothesis
-
-from action import obsidian
+from source.obsidian_db import obsidiandb
+from util import obsidian
 
 
 def daily(details):
     """Perform daily functions"""
 
     # Test to see if daily page already exists
-    daily_page = details.obsidian.daily_page_path()
+    daily_page = obsidiandb.daily_page_path()
     if os.path.exists(daily_page) and not details.dry_run:
         details.logger.warning(f"Daily page {daily_page} already exists.")
         return
@@ -26,10 +26,10 @@ def daily(details):
 type: Daily note
 ---
 Weekday:: {datetime.today().strftime('%A')}
-Two weeks ago:: {obsidian.get_link_for_file(details.obsidian.daily_page(offset=-14))}
-Last week:: {obsidian.get_link_for_file(details.obsidian.daily_page(offset=-7))}
-Yesterday:: {obsidian.get_link_for_file(details.obsidian.daily_page(offset=-1))}
-Tomorrow:: {obsidian.get_link_for_file(details.obsidian.daily_page(offset=1))}
+Two weeks ago:: {obsidian.get_link_for_file(obsidiandb.daily_page(offset=-14))}
+Last week:: {obsidian.get_link_for_file(obsidiandb.daily_page(offset=-7))}
+Yesterday:: {obsidian.get_link_for_file(obsidiandb.daily_page(offset=-1))}
+Tomorrow:: {obsidian.get_link_for_file(obsidiandb.daily_page(offset=1))}
 
 ## Tags for Today
 ```dataview
@@ -49,32 +49,32 @@ Grateful for::
         "pinboard": create_pinboard_entry,
     }
 
-    for source_name, source in details.origins.items():
-        if source_name.lower() == "hypothesis":
+    for origin_name, origin in details.origins.items():
+        if origin_name.lower() == "hypothesis":
             continue  # Handled later as annotations, not as an individual source
-        if source_name.lower() not in obsidian_dispatch:
-            details.logger.warning(f"No Obsidian dispatch found for {source_name}.")
+        if origin_name.lower() not in obsidian_dispatch:
+            details.logger.warning(f"No Obsidian dispatch found for {origin_name}.")
             continue
 
-        new_entries = source.new_entries_handler(details, obsidian_db_column)
+        new_entries = origin.new_entries_handler(details, obsidian_db_column)
         details.logger.info(
-            f"Found {len(new_entries)} new entries from {source_name} for Obsidian"
+            f"Found {len(new_entries)} new entries from {origin_name} for Obsidian"
         )
         for entry in new_entries:
             details.logger.debug(
-                f"New from {source_name} for Obsidian: {entry.title} ({entry.href})"
+                f"New from {origin_name} for Obsidian: {entry.title} ({entry.href})"
             )
             try:
-                result = obsidian_dispatch[source_name.lower()](details, entry)
+                result = obsidian_dispatch[origin_name.lower()](details, entry)
             except exceptions.KMException as err:
                 details.logger.error(err)
                 raise SystemExit from err
             if not details.dry_run:
-                source.save_entry_handler(
+                origin.save_entry_handler(
                     details, obsidian_db_column, entry.href, result
                 )
                 details.logger.info(
-                    f"Successfully handled {entry.href} from {source_name} for Obsidian"
+                    f"Successfully handled {entry.href} from {origin_name} for Obsidian"
                 )
             else:
                 details.logger.info(f"Would have saved {entry.href}")
@@ -110,31 +110,26 @@ def create_pinboard_entry(details, entry):  # pylint: disable=w0613
     title_scan = re.compile("(.*?)\s+\[(.*?)\]\s+(.*)")
     if (match := title_scan.match(entry.title)) is not None:
         title = f"{match.group(1)} {match.group(3)}"
-        description = f"{match.group(2)}\n\n{entry.description}"
+        description = f"_{match.group(2)}_\n\n{entry.description}"
     else:
         title = entry.title
         description = entry.description
 
     tags = _format_tags(entry.tags)
     if len(tags) > 1:
-        output_path, output_filename, publisher = details.obsidian.source_page_path(
-            title
+        output_path, output_filename, publisher = obsidiandb.init_source(
+            title=title,
+            url=entry.href,
+            created=entry.archive_date,
+            derived_date=entry.derived_date,
+            summary=entry.summarization,
         )
-        obsidian.init_source(
-            details,
-            output_path,
-            publisher,
-            entry.href,
-            entry.archive_date,
-            entry.derived_date,
-            entry.summarization,
-        )
-        with details.output_fd(details.obsidian.daily_page_path()) as daily_fh:
+        with details.output_fd(obsidiandb.daily_page_path()) as daily_fh:
             daily_fh.write(f"* New bookmark: [[{output_filename}]] ({publisher})\n")
-        detail_output = f"[{title}]({entry.href})\n{description}\nConcepts:: {tags}\n"
+        detail_output = f"[{title}]({entry.href})\n{description}\nTags:: {tags}\n"
     else:
-        output_path = details.obsidian.daily_page_path()
-        detail_output = f"* [{title}]({entry.href}): {description}"
+        output_path = obsidiandb.daily_page_path()
+        detail_output = f"* [{title}]({entry.href}): {description}\n"
 
     with details.output_fd(output_path) as source_fh:
         source_fh.write(detail_output)
@@ -152,18 +147,13 @@ def create_hypothesis_entries(details, daily_fh):
 
     new_sources = set()
     for ann in hypothesis.get_new_annotations(details):
-        output_path, output_filename, publisher = details.obsidian.source_page_path(
-            ann.document_title
-        )
         webpage = hypothesis.find_entry(details, ann.uri)
-        obsidian.init_source(
-            details,
-            output_path,
-            publisher,
-            ann.uri,
-            ann.created,
-            webpage.derived_date,
-            webpage.summarization,
+        output_path, output_filename, _ = obsidiandb.init_source(
+            title=ann.document_title,
+            url=ann.uri,
+            created=ann.created,
+            derived_date=webpage.derived_date,
+            summary=webpage.summarization,
         )
 
         with (details.output_fd(output_path)) as source_fh:
@@ -171,7 +161,7 @@ def create_hypothesis_entries(details, daily_fh):
             source_fh.write(
                 f"> {ann.quote}\n\n"
                 f"{ann.annotation}\n"
-                f"[Annotation]({ann.link_incontext})\n{tags}\n"
+                f"Link to [Annotation]({ann.link_incontext})\nTags:: {tags}\n"
             )
             if not details.dry_run:
                 hypothesis.save_annotation(details, ann.id, output_path)
