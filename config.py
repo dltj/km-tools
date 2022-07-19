@@ -22,6 +22,7 @@ class Config:  # pylint: disable=too-few-public-methods
 
     @property
     def kmtools_db(self):
+        """Get the kmtools database connection."""
         if not self.kmtools_db_conn:
             if self.settings.kmtools.dbfile:
                 self.kmtools_db_conn = sqlite3.connect(self.settings.kmtools.dbfile)
@@ -33,12 +34,11 @@ class Config:  # pylint: disable=too-few-public-methods
         return self.kmtools_db_conn
 
     def output_fd(self, file):
-        """Route output depending on whether this is a dry run or not
+        """Route output depending on whether the dry_run flag is set or not
 
-        :param details: context object
-        :param file: full path to output file
+        :param file: full path to output file to be ued when dry_run isn't set
 
-        return: file descriptor, stdout when dry_run, otherwise append file
+        return: file descriptor, stdout when dry_run, otherwise append file descriptor
         """
         if self.dry_run:
             click.secho(f">>> Would write to {file} >>>", fg="green")
