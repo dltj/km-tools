@@ -1,7 +1,7 @@
 """Post to Mastodon"""
 import click
 from mastodon import Mastodon
-from action import Action
+from action import ActionTuple
 
 
 @click.group()
@@ -29,7 +29,7 @@ def fetch_command(details, url, text):
 
 
 def register_hourly_action():
-    return Action("toot_url", toot_entry)
+    return ActionTuple("toot_url", toot_entry)
 
 
 def toot_entry(details, url=None, text=None, annotation_url=None):

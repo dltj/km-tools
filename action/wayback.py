@@ -1,9 +1,11 @@
 """Archive at Wayback"""
 import collections
-import requests
+
 import click
-from action import Action
 import exceptions
+import requests
+
+from action import ActionTuple
 
 
 @click.group()
@@ -50,7 +52,7 @@ def check_job_command(details, job_id=None):
 
 
 def register_hourly_action():
-    return Action("archive_url", save_url)
+    return ActionTuple("archive_url", save_url)
 
 
 # FIXME: Do better than this with the positional arguments

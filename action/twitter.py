@@ -1,11 +1,11 @@
 """Post to Twitter"""
 from TwitterAPI import TwitterAPI
-from action import Action
+from action import ActionTuple
 import exceptions
 
 
 def register_hourly_action():
-    return Action("tweet_url", tweet_entry)
+    return ActionTuple("tweet_url", tweet_entry)
 
 
 def tweet_entry(details, url=None, text=None, annotation_url=None):

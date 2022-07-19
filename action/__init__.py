@@ -1,6 +1,6 @@
 import collections
 
-Action = collections.namedtuple(
+ActionTuple = collections.namedtuple(
     "Action",
     [
         "db_column",
