@@ -1,8 +1,4 @@
 import click
-
-from action import Action, obsidian_daily
-
-
 from action import obsidian_daily
 
 
