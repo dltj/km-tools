@@ -50,15 +50,17 @@ def summarize(details, url):
         output_format="txt",
         include_tables=False,
     )
-    config.logger.debug(f"{raw_text=}")
 
     # Removing special characters and digits
     if raw_text is None:
         config.logger.info(f"No summarization from {url}")
         return None, None
+    # Remove timestamps on lines by themselves
+    raw_text = re.sub(r"\n[0-9]+:[0-9]+:[0-9]+\n", " ", raw_text)
+    config.logger.debug(f"{raw_text=}")
 
-    normalized_raw_text = re.sub("[^a-zA-Z]", " ", raw_text)
-    normalized_raw_text = re.sub(r"s+", " ", normalized_raw_text)
+    normalized_raw_text = re.sub("[^a-zA-Z']", " ", raw_text)
+    normalized_raw_text = re.sub(r"\s+", " ", normalized_raw_text)
 
     # nltk.download("stopwords")
     # nltk.download("punkt")
@@ -76,16 +78,24 @@ def summarize(details, url):
         word_frequencies[word] = word_frequencies[word] / maximum_frequncy
 
     sentence_list = nltk.sent_tokenize(raw_text)
-    sentence_scores = {}
-    for sent in sentence_list:
-        for word in nltk.word_tokenize(sent.lower()):
-            if word in word_frequencies.keys():
-                if len(sent.split(" ")) < 30:
-                    if sent not in sentence_scores.keys():
-                        sentence_scores[sent] = word_frequencies[word]
-                    else:
-                        sentence_scores[sent] += word_frequencies[word]
-    summary_sentences = heapq.nlargest(7, sentence_scores, key=sentence_scores.get)
-    summarization = " ".join(summary_sentences)
+    if len(sentence_list) < 7:
+        ## There are less than seven sentences (is this an uncorrected transcript?),
+        ## so just return the 50 most popular words
+        sorted_word_frequencies = {
+            k: v for k, v in sorted(word_frequencies.items(), key=lambda item: item[1])
+        }
+        summarization = " ".join(list(sorted_word_frequencies.keys())[-50:])
+    else:
+        sentence_scores = {}
+        for sent in sentence_list:
+            for word in nltk.word_tokenize(sent.lower()):
+                if word in word_frequencies.keys():
+                    if len(sent.split(" ")) < 30:
+                        if sent not in sentence_scores.keys():
+                            sentence_scores[sent] = word_frequencies[word]
+                        else:
+                            sentence_scores[sent] += word_frequencies[word]
+        summary_sentences = heapq.nlargest(7, sentence_scores, key=sentence_scores.get)
+        summarization = " ".join(summary_sentences)
 
     return derived_date, summarization
