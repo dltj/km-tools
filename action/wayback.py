@@ -66,7 +66,11 @@ def save_url(details, url=None, discard1=None, discard2=None):
     """
 
     ## This conditional effectively skips saving Internet Archive URLs into wayback
-    if url.startswith("https://archive.org/") or url.startswith("https://archive.is/"):
+    if (
+        url.startswith("https://archive.org/")
+        or url.startswith("https://archive.is/")
+        or url.startswith("https://archive.ph/")
+    ):
         return url
 
     wayback_headers = {
