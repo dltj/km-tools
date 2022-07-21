@@ -158,10 +158,24 @@ def create_hypothesis_entries(details, daily_fh):
 
         with (details.output_fd(output_path)) as source_fh:
             tags = _format_tags(ann.tags)
+            quote = ann.quote.strip()
+            annotation = ann.annotation.strip()
+            # headline = discussion = ""
+            if ann.annotation.startswith("##"):
+                headline, _, discussion = annotation.partition("\n")
+                headline = f"{headline}\n"
+            else:
+                headline = ""
+                discussion = annotation.strip()
+            if discussion:
+                discussion = f"{discussion}\n\n"
+            if len(tags) > 0:
+                tags = f"- Tags:: {tags}\n"
             source_fh.write(
-                f"> {ann.quote}\n\n"
-                f"{ann.annotation}\n"
-                f"Link to [Annotation]({ann.link_incontext})\nTags:: {tags}\n"
+                f"{headline}"
+                f"> {quote}\n\n"
+                f"{discussion}"
+                f"- Link to [Annotation]({ann.link_incontext})\n{tags}\n"
             )
             if not details.dry_run:
                 hypothesis.save_annotation(details, ann.id, output_path)
