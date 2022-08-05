@@ -1,7 +1,10 @@
 import os
+from time import gmtime, strftime
 
 import arrow
 from config import config
+
+from source import Resource
 
 
 class ObsidianDb:
@@ -59,23 +62,16 @@ class ObsidianDb:
     def source_page_path(self, source_title):
         """Get the full path to a source page in the Obsidian database.
 
-        This method will remove problematic characters from the title to make it into a file name. It also attempts to guess the publisher of the source by splitting on '|'.
+        This method will remove problematic characters from the title to make it into a file name.
 
         :param source_title: Source page name
 
         :returns:
             - Full path to the page in the Obsidian database
             - Filename portion of page path
-            - Publisher of the source (e.g. "Washington Post")
         """
-        if "|" in source_title:
-            filename, publisher = source_title.split("|", 1)
-            filename = filename.strip().replace(":", "—").replace("/", "-")
-            publisher = publisher.strip()
-        else:
-            filename = source_title
-            publisher = ""
-        return self.page_to_path(filename, folder="source"), filename, publisher
+        filename = source_title.strip().replace(":", "—").replace("/", "-")[:250]
+        return self.page_to_path(filename, folder="source"), filename
 
     def page_to_path(self, page, folder=None):
         """Return the full path of a page in the Obsidian database.
@@ -91,38 +87,37 @@ class ObsidianDb:
             folder = self.source_directory
         return os.path.join(self.db_directory, folder, page + ".md")
 
-    def init_source(
-        self, title=None, url=None, created=None, derived_date=None, summary=None
-    ):
+    def init_source(self, source: Resource):
         """If necessary, create a new source file in Obsidian and write the source's metadata
 
-        :param title: title of the source
-        :param publisher: the originating website (e.g. "Washington Post")
-        :param url: link to source
-        :param created: creation date for the source as string
-        :param derived_date: presumed date of source publication
-        :param summary: machine-generated summary of source
+        :param source: Instance of class Resource
 
         :returns:
             - Full path to the page in the Obsidian database
             - Filename of source file
-            - Publisher string
         """
-        source_path_filename, output_filename, publisher = obsidiandb.source_page_path(
-            title
-        )
-        if not os.path.exists(source_path_filename):
-            with config.output_fd(source_path_filename) as source_fd:
+        output_filepath, output_filename = obsidiandb.source_page_path(source.headline)
+        if not os.path.exists(output_filepath):
+            with config.output_fd(output_filepath) as source_fd:
+                if source.tags:
+                    # Dash to space
+                    tag_list = map(lambda x: x.replace("-", " "), source.tags)
+                    # Non hashtags to links
+                    tag_list = map(lambda x: f"[[{x}]]" if x[0] != "#" else x, tag_list)
+                    tags = ", ".join(tag_list)
+                else:
+                    tags = ""
                 source_fd.write(
                     "---\ntype: Source\n"
-                    f"source_url: {url}\n"
-                    f"bookmark_saved: {created}\n"
-                    f"source_created: {derived_date}\n"
-                    f"publisher: {publisher}\n"
+                    f"source_url: {source.uri}\n"
+                    f"bookmark_saved: {strftime('%Y-%m-%d', gmtime())}\n"
+                    f"source_created: {source.derived_date}\n"
+                    f"publisher: {source.publisher}\n"
                     "---\n"
-                    f"Automated summary:: {summary}\n\n"
+                    f"Automated summary:: {source.summary}\n\n"
+                    f"Tags:: {tags}\n\n"
                 )
-        return source_path_filename, output_filename, publisher
+        return output_filepath, output_filename
 
 
 obsidiandb = ObsidianDb()

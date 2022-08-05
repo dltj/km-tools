@@ -9,10 +9,11 @@ from logging.handlers import TimedRotatingFileHandler
 import click
 from omegaconf import OmegaConf
 
-from action import mastodon, obsidian, twitter, wayback
-from command import daily, hourly, robustify, summarize
+from action import mastodon, obsidian_hourly, twitter, wayback
+from command import daily, hourly, obsidian, robustify, summarize
 from config import config
 from source import hypothesis, pinboard
+from util.logging_util import PackagePathFilter
 
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
@@ -52,9 +53,10 @@ def cli(ctx, dry_run, debug, verbose, logfile):
                     f"Could not write to {logpath}, falling back to stdout",
                     file=sys.stderr,
                 )
+    handler.addFilter(PackagePathFilter())
     logging.basicConfig(
         handlers=[handler],
-        format="%(asctime)s - %(levelname)s - %(module)s@%(lineno)s - %(message)s",
+        format="%(asctime)s - %(levelname)-8s - %(relativepath)s@%(lineno)s - %(message)s",
     )
     config.logger = logging.getLogger(__name__)
     if debug:
@@ -63,17 +65,6 @@ def cli(ctx, dry_run, debug, verbose, logfile):
         config.logger.setLevel(logging.INFO)
     else:
         config.logger.setLevel(logging.WARNING)
-
-    # Register source dispatchers
-    config.origins = {}
-    config.origins["Pinboard"] = pinboard.register_origin()
-    config.origins["Hypothesis"] = hypothesis.register_origin()
-
-    # Register actions
-    config.actions = {}
-    config.actions["Twitter"] = twitter.register_hourly_action()
-    config.actions["Wayback"] = wayback.register_hourly_action()
-    config.actions["Mastodon"] = mastodon.register_hourly_action()
 
     ctx.obj = config
 

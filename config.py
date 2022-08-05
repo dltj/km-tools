@@ -16,8 +16,8 @@ class Config:  # pylint: disable=too-few-public-methods
         self.dry_run = None
         self.logger = None
         self.settings = None
-        self.origins = {}
-        self.actions = {}
+        self.origins = list()
+        self.actions = list()
         self.kmtools_db_conn = None
 
     @property

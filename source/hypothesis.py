@@ -4,8 +4,127 @@ import json
 import click
 import exceptions
 import requests
+from config import config
 
-from source import Annotation, OriginTuple, Webpage
+from source import Annotation, Origin, WebResource
+
+
+class HypothesisPageOrigin(Origin):
+    origin_name = "HYPOTHESIS"
+    origin_table = "hyp_pages"
+    origin_key = "uri"
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def make_resource(self, uri: str) -> WebResource:
+        return HypothesisResource(uri=uri)
+
+
+hypothesis_page_origin = HypothesisPageOrigin()
+config.origins.append(hypothesis_page_origin)
+
+
+class HypothesisResource(WebResource):
+    origin = hypothesis_page_origin
+
+    def __init__(self, uri) -> None:
+        db = config.kmtools_db
+        search_cur = db.cursor()
+        query = "SELECT * FROM hyp_pages WHERE uri=:uri"
+        search_cur.execute(query, [uri])
+        row = search_cur.fetchone()
+        if row:
+            super().__init__(
+                uri=uri,
+                title=row["title"],
+                description=None,
+                tags=None,
+                public=(row["public"] == "1"),
+            )
+            if search_cur.fetchone():
+                raise exceptions.MoreThanOneError(uri)
+        else:
+            raise exceptions.ResourceNotFoundError(uri)
+        self.annotation_url = f"https://via.hypothes.is/{self.uri}"
+
+
+class HypothesisAnnotationOrigin(Origin):
+    origin_name = "HYPOTHESIS"
+    origin_table = "hyp_posts"
+    origin_key = "link_html"
+
+    def __init__(self) -> None:
+        super().__init__()
+
+    def make_resource(self, uri: str) -> WebResource:
+        return HypothesisAnnotation(uri)
+
+
+hypothesis_annotation_origin = HypothesisAnnotationOrigin()
+
+
+class HypothesisAnnotation(Annotation):
+    origin = hypothesis_annotation_origin
+
+    def __init__(self, uri) -> None:
+        db = config.kmtools_db
+        search_cur = db.cursor()
+        query = "SELECT * FROM hyp_posts WHERE link_html=:uri"
+        search_cur.execute(query, [uri])
+        row = search_cur.fetchone()
+        if row:
+            super().__init__(
+                uri=row["link_html"],
+                source=HypothesisResource(row["uri"]),
+                title=row["document_title"],
+                quote=row["quote"],
+                annotation=row["annotation"],
+                tags=json.loads(row["tags"]),
+                public=(row["hidden"] == "0"),
+            )
+            if search_cur.fetchone():
+                raise exceptions.MoreThanOneError(uri)
+        else:
+            raise exceptions.ResourceNotFoundError(uri)
+        self.created_date = row["created"]
+        self.updated_date = row["updated"]
+        self.link_incontext = row["link_incontext"]
+
+    def output_annotation(self, filepath):
+        with (config.output_fd(filepath)) as output_fh:
+            tags = _format_tags(self.tags)
+            quote = self.quote.strip()
+            annotation = self.annotation.strip()
+            # headline = discussion = ""
+            if annotation.startswith("##"):
+                headline, _, discussion = annotation.partition("\n")
+                headline = f"{headline}\n"
+            else:
+                headline = ""
+                discussion = annotation.strip()
+            if discussion:
+                discussion = f"{discussion}\n\n"
+            if tags:
+                tags = f"- Tags:: {tags}\n"
+            output_fh.write(
+                f"{headline}"
+                f"> {quote}\n\n"
+                f"{discussion}"
+                f"- Link to [Annotation]({self.link_incontext})\n{tags}\n"
+            )
+
+
+def _format_tags(tag_list):
+    if tag_list:
+        # Dash to space
+        tag_list = map(lambda x: x.replace("-", " "), tag_list)
+        # Non hashtags to links
+        tag_list = map(lambda x: f"[[{x}]]" if x[0] != "#" else x, tag_list)
+        tags = ", ".join(tag_list)
+    else:
+        tags = None
+    return tags
 
 
 @click.group()
@@ -18,10 +137,6 @@ def hypothesis():
 def fetch_command(details):
     """Retrieve annotations"""
     return fetch(details)
-
-
-def register_origin():
-    return OriginTuple(new_entries, save_entry)
 
 
 def fetch(details):
@@ -85,7 +200,6 @@ def fetch(details):
             annotation["links"]["incontext"],
             int(annotation["hidden"] == True),  # noqa: E712, pylint: disable=C0121
             int(annotation["flagged"] == True),  # noqa: E712, pylint: disable=C0121
-            "",  # obsidian path to file
         ]
         query = f"REPLACE INTO hyp_posts VALUES ({','.join('?' * len(values))})"
         replace_cur.execute(query, values)
@@ -100,12 +214,7 @@ def fetch(details):
                     annotation["uri"],
                     title,
                     1,  ## Is public
-                    "",  # Twitter URL (when posted)
-                    "",  # Wayback URL (when saved)
-                    "",  # Mastodon URL (when tooted)
                     datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z"),
-                    "",  # derived date
-                    "",  # summarization
                 ]
                 query = f"REPLACE INTO hyp_pages VALUES ({','.join('?' * len(values))})"
                 replace_cur.execute(query, values)
@@ -116,146 +225,6 @@ def fetch(details):
         replace_cur.execute(query, values)
         details.logger.info(f"Added {annotation['uri']} from {annotation['updated']}.")
         db.commit()
-
-
-def find_entry(details, href):
-    db = details.kmtools_db
-    search_cur = db.cursor()
-    query = "SELECT * FROM hyp_pages WHERE uri=:href"
-    search_cur.execute(query, [href])
-    row = search_cur.fetchone()
-    if row:
-        webpage = Webpage(
-            row["uri"],
-            row["uri"],
-            row["title"],
-            None,
-            None,
-            f"https://via.hypothes.is/{row['uri']}",
-            row["archive_url"],
-            row["time"],
-            row["derived_date"],
-            row["summarization"],
-        )
-        if search_cur.fetchone():
-            raise exceptions.MoreThanOneError
-    else:
-        webpage = None
-    return webpage
-
-
-def new_entries(details, db_column):
-    new_rows = []
-
-    db = details.kmtools_db
-    search_cur = db.cursor()
-    query = f"SELECT * FROM hyp_pages WHERE public=1 AND LENGTH({db_column})<1"
-
-    for row in search_cur.execute(query):
-        webpage = Webpage(
-            row["uri"],
-            row["uri"],
-            row["title"],
-            None,
-            None,
-            f"https://via.hypothes.is/{row['uri']}",
-            row["archive_url"],
-            row["time"],
-            row["derived_date"],
-            row["summarization"],
-        )
-        new_rows.append(webpage)
-
-    return new_rows
-
-
-def save_entry(details, db_column, ident, stored_value):
-    db = details.kmtools_db
-    update_cur = db.cursor()
-    query = f"UPDATE hyp_pages SET {db_column}=? WHERE uri=?"
-    values = [stored_value, ident]
-    update_cur.execute(query, values)
-    db.commit()
-
-
-def get_wayback_jobs(details):
-    """Get in-progress Wayback Job IDs from Hypothesis database.
-
-    :returns: list of job ids
-    """
-    job_entries = []
-
-    db = details.kmtools_db
-    search_cur = db.cursor()
-    query = "SELECT * FROM hyp_pages WHERE archive_url LIKE 'spn2-%'"
-
-    for row in search_cur.execute(query):
-        job_entries.append(row["archive_url"])
-
-    return job_entries
-
-
-def get_new_annotations(details):
-    """Get an iterator of new Hypothesis annotations
-
-    :param details: context object
-
-    :returns: an Annotation
-    """
-    db = details.kmtools_db
-    search_cur = db.cursor()
-    query = "SELECT * FROM hyp_posts WHERE LENGTH(obsidian_file)<1 ORDER BY updated"
-
-    for row in search_cur.execute(query):
-        yield (
-            Annotation(
-                row["id"],
-                row["uri"],
-                row["annotation"],
-                row["created"],
-                row["updated"],
-                row["quote"],
-                row["tags"],
-                row["document_title"],
-                row["link_html"],
-                row["link_incontext"],
-                row["hidden"],
-                row["flagged"],
-            )
-        )
-
-
-def save_annotation(details, uri, location):
-    """Save where an annotation has been saved in Obsidian.
-
-    :param details: context object
-    :param id: id of the annotation
-    :param location: file path to the Obsidian file
-
-    :returns: None
-    """
-    db = details.kmtools_db
-    update_cur = db.cursor()
-    query = "UPDATE hyp_posts SET obsidian_file=? WHERE id=?"
-    values = [location, uri]
-    update_cur.execute(query, values)
-    db.commit()
-
-
-def get_unsummarized(details):
-    """Return URLs of rows that do not have summaries
-
-    :returns: list of URLs
-    """
-
-    unsummarized_entries = []
-    db = details.kmtools_db
-    search_cur = db.cursor()
-    query = "SELECT * FROM hyp_pages WHERE LENGTH(summarization)<1 ORDER BY time"
-    for row in search_cur.execute(query):
-        unsummarized_entries.append(row["uri"])
-
-    return unsummarized_entries
 
 
 """
@@ -272,18 +241,11 @@ CREATE TABLE hyp_posts (
 	link_incontext INTEGER,
 	hidden INTEGER,
 	flagged INTEGER,
-	obsidian_file TEXT);
 
 CREATE TABLE hyp_pages (
 	uri TEXT PRIMARY KEY,
 	title TEXT,
 	public INTEGER DEFAULT 0,
-	tweet_url TEXT,
-	archive_url TEXT,
-    toot_url TEXT,
-    time TEXT,
-    derived_date TEXT,
-    summarization TEXT
 );
 
 CREATE TABLE hyp_posts_pages_map (

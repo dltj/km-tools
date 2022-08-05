@@ -62,13 +62,30 @@ class PinboardError(KMException):
         super().__init__(message)
 
 
+class ResourceNotFoundError(KMException):
+    """Exception raised when a search of resources for a URL returns more than one row."""
+
+    default_detail = "Resource not found for URL"
+
+    def __init__(self, uri=None):
+        message = self.default_detail
+        if uri:
+            message = f"Resource not found for URL {uri}"
+        self.detail = message
+        super().__init__(message)
+
+
 class MoreThanOneError(KMException):
     """Exception raised when a search of sources for a URL returns more than one row."""
 
     default_detail = "More than one URL returned"
 
-    def __init__(self):
-        super().__init__()
+    def __init__(self, uri=None):
+        message = self.default_detail
+        if uri:
+            message = f"More than one resource found for URL {uri}"
+        self.detail = message
+        super().__init__(message)
 
 
 class HypothesisError(KMException):
