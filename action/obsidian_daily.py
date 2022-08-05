@@ -1,3 +1,4 @@
+import logging
 import os
 from datetime import datetime
 
@@ -7,6 +8,8 @@ from source.obsidian_db import obsidiandb
 from util import obsidian
 
 from action import Action
+
+logger = logging.getLogger(__name__)
 
 
 class ObsidianDaily(Action):
@@ -40,11 +43,9 @@ class ObsidianDaily(Action):
                 f"LEFT JOIN {self.action_table} action ON action.url=origin.{origin.origin_key} "
                 f"WHERE action.obsidian_daily_filepath IS NULL"
             )
-            config.logger.debug(f"Executing {query=}")
+            logger.debug(f"Executing {query=}")
             for row in search_cur.execute(query):
-                config.logger.info(
-                    f"Now {row[origin.origin_key]} of {origin.origin_name}"
-                )
+                logger.info(f"Now {row[origin.origin_key]} of {origin.origin_name}")
                 source = origin.make_resource(uri=row[origin.origin_key])
                 yield source
 
@@ -58,11 +59,11 @@ def daily(details):
     # Test to see if daily page already exists
     daily_page = obsidiandb.daily_page_path()
     if os.path.exists(daily_page) and not details.dry_run:
-        details.logger.warning(f"Daily page {daily_page} already exists.")
+        logger.warning(f"Daily page {daily_page} already exists.")
         return
 
     # Make daily note navigation
-    details.logger.info(f"Creating daily note file for today")
+    logger.info(f"Creating daily note file for today")
     with details.output_fd(daily_page) as daily_fh:
         daily_fh.write(
             f"""---
@@ -92,12 +93,12 @@ Grateful for::
         for source in obsidian_daily_action.new_sources():
             if source.headline not in seen_headlines:
                 if source.origin.obsidian_tagless and not source.tags:
-                    details.logger.info(f"Adding source with no tags: {source.title}")
+                    logger.info(f"Adding source with no tags: {source.title}")
                     daily_fh.write(
                         f"* Bookmark: [{source.headline}]({source.uri}) ({source.publisher}): {source.description}\n"
                     )
                 else:
-                    details.logger.info(f"Source with tags; link to '{source.title}'")
+                    logger.info(f"Source with tags; link to '{source.title}'")
                     daily_fh.write(
                         f"* {type(source).__name__}: [[{source.headline}]] ({source.publisher})\n"
                     )

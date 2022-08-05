@@ -2,11 +2,14 @@
 Hold the configuration for the application.
 """
 
+import logging
 import os
 import sqlite3
 import sys
 
 import click
+
+logger = logging.getLogger(__name__)
 
 
 class Config:  # pylint: disable=too-few-public-methods
@@ -14,7 +17,6 @@ class Config:  # pylint: disable=too-few-public-methods
 
     def __init__(self):
         self.dry_run = None
-        self.logger = None
         self.settings = None
         self.origins = list()
         self.actions = list()
@@ -28,7 +30,7 @@ class Config:  # pylint: disable=too-few-public-methods
                 self.kmtools_db_conn = sqlite3.connect(self.settings.kmtools.dbfile)
                 self.kmtools_db_conn.row_factory = sqlite3.Row
                 self.kmtools_db_conn.execute("BEGIN EXCLUSIVE")
-                self.kmtools_db_conn.set_trace_callback(self.logger.debug)
+                self.kmtools_db_conn.set_trace_callback(logger.debug)
             else:
                 raise RuntimeError("KM-Tools database location not set")
         return self.kmtools_db_conn

@@ -1,7 +1,7 @@
 """Get summary of item"""
 import heapq
+import logging
 import re
-import time
 
 import nltk
 import trafilatura
@@ -9,6 +9,8 @@ from config import config
 from source import Origin, Resource, WebResource
 
 from action import Action
+
+logger = logging.getLogger(__name__)
 
 
 class Summarize(Action):
@@ -28,7 +30,7 @@ class Summarize(Action):
         """
         derived_date, summary = summarize(source=source)
 
-        config.logger.info(
+        logger.info(
             f"Successfully summarized {source.uri} as {derived_date} / {summary}"
         )
         Action._save_attributes(
@@ -90,11 +92,11 @@ def summarize(source: WebResource = None):
 
     # Removing special characters and digits
     if raw_text is None:
-        config.logger.info(f"No summarization from {source.url}")
+        logger.info(f"No summarization from {source.url}")
         return None, None
     # Remove timestamps on lines by themselves
     raw_text = re.sub(r"\n[0-9]+:[0-9]+:[0-9]+\n", " ", raw_text)
-    config.logger.debug(f"{raw_text=}")
+    logger.debug(f"{raw_text=}")
 
     normalized_raw_text = re.sub("[^a-zA-Z']", " ", raw_text)
     normalized_raw_text = re.sub(r"\s+", " ", normalized_raw_text)

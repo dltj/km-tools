@@ -1,9 +1,13 @@
 """Output links that have been robustified."""
-from dateutil import parser
+import logging
 from string import Template
+
 import click
+from dateutil import parser
 from exceptions import MoreThanOneError
-from source import pinboard, hypothesis
+from source import hypothesis, pinboard
+
+logger = logging.getLogger(__name__)
 
 
 @click.command()
@@ -30,25 +34,25 @@ from source import pinboard, hypothesis
 @click.pass_obj
 def robustify(details, style, url):
     """Output markup for a robust link"""
-    details.logger.debug(f"Searching for {url}")
+    logger.debug(f"Searching for {url}")
     try:
         webpage_pinboard = pinboard.find_entry(details, url)
     except MoreThanOneError:
-        details.logger.error(f"More than one pinboard entry found for {url}. Exiting.")
+        logger.error(f"More than one pinboard entry found for {url}. Exiting.")
         return
 
     try:
         webpage_hypothesis = hypothesis.find_entry(details, url)
     except MoreThanOneError:
-        details.logger.error(f"More than one hypothesis page found for {url}. Exiting.")
+        logger.error(f"More than one hypothesis page found for {url}. Exiting.")
         return
 
     if webpage_pinboard and webpage_hypothesis:
-        details.logger.error(f"{url} found in both Pinboard and Hypothesis. Exiting.")
+        logger.error(f"{url} found in both Pinboard and Hypothesis. Exiting.")
         return
 
     if not webpage_pinboard and not webpage_hypothesis:
-        details.logger.warning(f"{url} not found in Pinboard and Hypothesis. Exiting.")
+        logger.warning(f"{url} not found in Pinboard and Hypothesis. Exiting.")
         return
 
     webpage = webpage_pinboard if webpage_pinboard else webpage_hypothesis
@@ -81,7 +85,7 @@ post=''
         {
             "href": webpage.href,
             "archive_url": webpage.archive_url,
-            "archive_date": webpage.archive_date,
+            "archive_date": archive_date,
             "title": webpage.title,
         }
     )

@@ -1,5 +1,6 @@
 import datetime
 import json
+import logging
 
 import click
 import exceptions
@@ -7,6 +8,8 @@ import requests
 from config import config
 
 from source import Annotation, Origin, WebResource
+
+logger = logging.getLogger(__name__)
 
 
 class HypothesisPageOrigin(Origin):
@@ -158,23 +161,23 @@ def fetch(details):
     if since_date:
         params["search_after"] = since_date
 
-    details.logger.debug(f"Calling Hypothesis with {headers} (plus auth) and {params}")
+    logger.debug(f"Calling Hypothesis with {headers} (plus auth) and {params}")
     headers["Authorization"] = f"Bearer {details.settings.hypothesis.api_token}"
 
     r = requests.get("https://api.hypothes.is/api/search", params=params)
     if r.status_code > 200:
-        details.logger.info(f"Couldn't call Hypothesis: ({r.status_code}): {r.text}")
+        logger.info(f"Couldn't call Hypothesis: ({r.status_code}): {r.text}")
         raise exceptions.HypothesisError(r.status_code, r.text)
 
     replace_cur = db.cursor()
 
     for annotation in r.json()["rows"]:
-        details.logger.debug(
+        logger.debug(
             f"Got annotation {annotation['id']}, last updated {annotation['updated']}: {annotation=}"
         )
         ## Skip comments on other's annotations
         if "references" in annotation:
-            details.logger.debug(f"Skipping...reference to {annotation['references']}")
+            logger.debug(f"Skipping...reference to {annotation['references']}")
             continue
 
         if "selector" in annotation["target"][0]:
@@ -218,12 +221,12 @@ def fetch(details):
                 ]
                 query = f"REPLACE INTO hyp_pages VALUES ({','.join('?' * len(values))})"
                 replace_cur.execute(query, values)
-                details.logger.debug("Added to pages table.")
+                logger.debug("Added to pages table.")
 
         query = "REPLACE INTO hyp_posts_pages_map VALUES (?, ?)"
         values = [annotation["id"], annotation["uri"]]
         replace_cur.execute(query, values)
-        details.logger.info(f"Added {annotation['uri']} from {annotation['updated']}.")
+        logger.info(f"Added {annotation['uri']} from {annotation['updated']}.")
         db.commit()
 
 

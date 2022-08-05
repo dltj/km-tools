@@ -1,10 +1,14 @@
 """Post to Mastodon"""
+import logging
+
 import click
 from config import config
 from source import Origin, Resource, WebResource
 
 from action import Action
 from mastodon import Mastodon as mastodon_library
+
+logger = logging.getLogger(__name__)
 
 
 class Mastodon(Action):
@@ -39,17 +43,17 @@ class Mastodon(Action):
         toot_text = f"🔖 {source.title[:text_length]} {source.url}{annotation_addition}"
 
         if config.dry_run:
-            config.logger.info(f"Would have tooted: {toot_text}")
+            logger.info(f"Would have tooted: {toot_text}")
             return ""  ## Dry-run, so return empty string
 
         try:
             toot_dict = mastodon_client.toot(toot_text)
         except mastodon.MastodonError as err:
-            config.logger.info(f"Couldn't toot: {err}")
+            logger.info(f"Couldn't toot: {err}")
             raise SystemExit from err
-        config.logger.debug(f"Successfully tooted ({toot_dict['uri']}): '{toot_text}'")
+        logger.debug(f"Successfully tooted ({toot_dict['uri']}): '{toot_text}'")
 
-        config.logger.info(f"Successfully tooted {source.uri} as {toot_dict['uri']}")
+        logger.info(f"Successfully tooted {source.uri} as {toot_dict['uri']}")
         Action._save_attributes(
             self, source, self.attributes_supplied, [toot_dict["uri"]]
         )

@@ -1,10 +1,14 @@
 """Add resources to the Obsidian database"""
 
+import logging
+
 from config import config
 from source import Annotation, Origin, Resource
 from source.obsidian_db import obsidiandb
 
 from action import Action
+
+logger = logging.getLogger(__name__)
 
 
 class ObsidianHourly(Action):
@@ -29,9 +33,7 @@ class ObsidianHourly(Action):
         if page_source.origin.obsidian_tagless and len(page_source.tags) == 0:
             obsidian_filename = None
             obsidian_filepath = None
-            config.logger.info(
-                f"Tagless source {page_source.uri} not added to Obsidian"
-            )
+            logger.info(f"Tagless source {page_source.uri} not added to Obsidian")
             return
 
         obsidian_filepath, obsidian_filename = obsidiandb.init_source(page_source)
@@ -39,7 +41,7 @@ class ObsidianHourly(Action):
         if isinstance(source, Annotation):
             source.output_annotation(obsidian_filepath)
 
-        config.logger.info(
+        logger.info(
             f"Successfully added {source.uri} to Obsidian as {obsidian_filename} ({obsidian_filepath})"
         )
 

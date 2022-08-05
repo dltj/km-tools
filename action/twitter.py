@@ -1,10 +1,14 @@
 """Post to Twitter"""
+import logging
+
 import exceptions
 from config import config
 from source import Origin, Resource, WebResource
 from TwitterAPI import TwitterAPI
 
 from action import Action
+
+logger = logging.getLogger(__name__)
 
 
 class Twitter(Action):
@@ -44,18 +48,18 @@ class Twitter(Action):
         tweet_text = f"🔖 {source.title[:text_length]} {source.url}{annotation_addition}"
 
         if config.dry_run:
-            config.logger.info(f"Would have tweeted: {tweet_text}")
+            logger.info(f"Would have tweeted: {tweet_text}")
             return ""  ## Dry-run, so return empty string
 
         r = twiter_api.request("statuses/update", {"status": tweet_text})
         if r.status_code == 200:
-            config.logger.info(f"Successfully tweeted: '{tweet_text}'")
+            logger.info(f"Successfully tweeted: '{tweet_text}'")
             tweet_id = r.json()["id_str"]
         else:
-            config.logger.warning(f"Couldn't tweet ({r.status_code}): {r.text}")
+            logger.warning(f"Couldn't tweet ({r.status_code}): {r.text}")
             raise exceptions.TweetError(r.status_code, r.text)
 
-        config.logger.info(f"Successfully tweeted {source.uri} as {tweet_id}")
+        logger.info(f"Successfully tweeted {source.uri} as {tweet_id}")
         Action._save_attributes(self, source, self.attributes_supplied, [tweet_id])
         return tweet_id
 

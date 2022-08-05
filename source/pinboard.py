@@ -1,4 +1,5 @@
 import json
+import logging
 
 import click
 import dateutil.parser
@@ -7,6 +8,8 @@ import requests
 from config import config
 
 from source import Origin, WebResource
+
+logger = logging.getLogger(__name__)
 
 
 class PinboardOrigin(Origin):
@@ -86,18 +89,18 @@ def fetch(ctx_obj):
             + "Z"
         )
 
-    ctx_obj.logger.debug(f"Calling Pinboard with {params} (plus auth)")
+    logger.debug(f"Calling Pinboard with {params} (plus auth)")
     params["auth_token"] = ctx_obj.settings.pinboard.auth_token
 
     r = requests.get("https://api.pinboard.in/v1/posts/all", params=params)
     if r.status_code > 200:
-        ctx_obj.logger.debug(f"Couldn't call Pinboard: ({r.status_code}): {r.text}")
+        logger.debug(f"Couldn't call Pinboard: ({r.status_code}): {r.text}")
         raise exceptions.PinboardError(r.status_code, r.text)
 
     replace_cur = db.cursor()
 
     for bookmark in r.json():
-        ctx_obj.logger.debug(
+        logger.debug(
             f"Got annotation {bookmark['href']}, last updated {bookmark['time']}"
         )
 
@@ -115,7 +118,7 @@ def fetch(ctx_obj):
 
         query = f"REPLACE INTO pinb_posts VALUES ({','.join('?' * len(values))})"
         replace_cur.execute(query, values)
-        ctx_obj.logger.info(f"Added {bookmark['href']} from {bookmark['time']}.")
+        logger.info(f"Added {bookmark['href']} from {bookmark['time']}.")
         db.commit()
 
 

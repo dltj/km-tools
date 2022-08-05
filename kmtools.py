@@ -15,6 +15,8 @@ from config import config
 from source import hypothesis, pinboard
 from util.logging_util import PackagePathFilter
 
+logger = logging.getLogger()
+
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option("--dry-run", is_flag=True)
@@ -58,13 +60,12 @@ def cli(ctx, dry_run, debug, verbose, logfile):
         handlers=[handler],
         format="%(asctime)s - %(levelname)-8s - %(relativepath)s@%(lineno)s - %(message)s",
     )
-    config.logger = logging.getLogger(__name__)
     if debug:
-        config.logger.setLevel(logging.DEBUG)
+        logger.setLevel(logging.DEBUG)
     elif verbose:
-        config.logger.setLevel(logging.INFO)
+        logger.setLevel(logging.INFO)
     else:
-        config.logger.setLevel(logging.WARNING)
+        logger.setLevel(logging.WARNING)
 
     ctx.obj = config
 

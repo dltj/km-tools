@@ -52,10 +52,10 @@ class Action(object):
         search_cur = db.cursor()
         query = f"SELECT {name} FROM {action_table} WHERE url LIKE ?"
         values = [url]
-        config.logger.debug(f"{query=} for {values=}")
+        logger.debug(f"{query=} for {values=}")
         search_cur.execute(query, values)
         result = search_cur.fetchone()[0]
-        config.logger.debug(f"{result=}")
+        logger.debug(f"{result=}")
         return result
 
     def _save_attributes(
@@ -90,6 +90,6 @@ class Action(object):
         values = (
             values + attributes + attributes + [source.uri, source.origin.origin_name]
         )
-        config.logger.debug(f"With {query=}, inserting {values=}")
+        logger.debug(f"With {query=}, inserting {values=}")
         insert_cur.execute(query, values)
         db.commit()
