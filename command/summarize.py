@@ -2,6 +2,7 @@
 
 import click
 from action import summarize
+from source import WebResource
 
 
 @click.command(name="summarize")
@@ -17,7 +18,8 @@ def summarize_command(details, url=None, quiet=False):
     :param url: URL to summarize
     """
     if url:
-        derived_date, summarization = summarize(details, url)
+        source = WebResource(url)
+        derived_date, summarization = summarize.summarize(source)
         if not quiet:
             click.echo(
                 f"The webpage at {url} was published on {derived_date}. It can be summarized as follows\n"

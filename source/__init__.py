@@ -95,15 +95,20 @@ class WebResource(Resource):
             """,
             re.X,
         )
-        if match := title_scan.match(title):
-            headline = f"{match.group(1)}"
-            if match.group(3):
-                headline = f"{headline} – {match.group(3)}"
-            description = f"_{match.group(5)}_\n\n{description}"
-            publisher = match.group(6)
-        else:
-            headline = title
-            publisher = None
+
+        headline = None
+        publisher = None
+
+        if title:
+            if match := title_scan.match(title):
+                headline = f"{match.group(1)}"
+                if match.group(3):
+                    headline = f"{headline} – {match.group(3)}"
+                description = f"_{match.group(5)}_\n\n{description}"
+                publisher = match.group(6)
+            else:
+                headline = title
+                publisher = None
 
         super().__init__(
             uri=uri,
