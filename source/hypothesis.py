@@ -1,6 +1,7 @@
 import datetime
 import json
 import logging
+import re
 
 import click
 import exceptions
@@ -31,6 +32,12 @@ config.origins.append(hypothesis_page_origin)
 class HypothesisResource(WebResource):
     origin = hypothesis_page_origin
 
+    docdrop_url_scan = re.compile(
+        r"""^https?://docdrop.org/video/(.*?)/?$          # YouTube video id (group 1)
+    """,
+        re.X,
+    )
+
     def __init__(self, uri) -> None:
         db = config.kmtools_db
         search_cur = db.cursor()
@@ -38,6 +45,11 @@ class HypothesisResource(WebResource):
         search_cur.execute(query, [uri])
         row = search_cur.fetchone()
         if row:
+            if match := self.docdrop_url_scan.match(uri):
+                annotation_url = uri
+                uri = f"https://youtube.com/watch?v={match.group(1)}"
+            else:
+                annotation_url = f"https://via.hypothes.is/{uri}"
             super().__init__(
                 uri=uri,
                 title=row["title"],
@@ -49,7 +61,7 @@ class HypothesisResource(WebResource):
                 raise exceptions.MoreThanOneError(uri)
         else:
             raise exceptions.ResourceNotFoundError(uri)
-        self.annotation_url = f"https://via.hypothes.is/{self.uri}"
+        self.annotation_url = annotation_url
 
 
 class HypothesisAnnotationOrigin(Origin):

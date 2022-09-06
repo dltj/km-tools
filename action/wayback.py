@@ -58,7 +58,7 @@ class Wayback(Action):
         ] = f"LOW {config.settings.wayback.access_key}:{config.settings.wayback.secret_key}"
 
         if config.dry_run:  # pylint: disable=R1720
-            logger.info(f"Couldn't save url ({r.status_code}): {r.text}")
+            logger.info(f"Would have archived: {source.uri}")
             return
 
         r = requests.post(wayback_endpoint, headers=wayback_headers, data=wayback_body)
