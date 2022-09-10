@@ -41,11 +41,13 @@ class Twitter(Action):
             annotation_addition += source.annotation_url
 
         url_length = (
-            short_url_length if len(source.url) > short_url_length else len(source.url)
+            short_url_length
+            if len(source.normalized_url) > short_url_length
+            else len(source.normalized_url)
         )
         meta_text = 4
         text_length = 280 - url_length - meta_text - annotation_length
-        tweet_text = f"🔖 {source.title[:text_length]} {source.url}{annotation_addition}"
+        tweet_text = f"🔖 {source.title[:text_length]} {source.normalized_url}{annotation_addition}"
 
         if config.dry_run:
             logger.info(f"Would have tweeted: {tweet_text}")

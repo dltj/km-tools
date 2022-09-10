@@ -77,7 +77,22 @@ class Resource:
 
 
 class WebResource(Resource):
-    """A web resource"""
+    """A web resource
+
+    Attributes:
+        uri (str): Address of the web resource
+        title (str): Web resource title; can be broken down into headline and publisher
+        description (str): Description of the web resource
+        tags (str): Human-assigned tags
+        public (bool): Whether this resource is marked as public at the origin
+        headline (str): The headline part of the title
+        publisher (str): The publisher part of the title
+        normalized_url (str): A computed address for a resource, otherwise copy of uri
+        annotation_url (str): Address of the resource with annotations displayed
+
+    Note:
+        `headline` and `publisher` are computed from the `title` string; a vertical bar separates headline from publisher.
+    """
 
     def __init__(
         self,
@@ -119,6 +134,7 @@ class WebResource(Resource):
             tags=tags,
         )
         self.public = public
+        self.normalized_url = uri
         self.annotation_url = None
 
     @property

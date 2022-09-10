@@ -32,15 +32,15 @@ class Mastodon(Action):
             api_base_url=config.settings.mastodon.api_base_url,
         )
 
-        annotation_length = 0
         annotation_addition = ""
         if source.annotation_url:
             annotation_addition = f" \U0001F5D2 annotated {source.annotation_url}"
 
-        url_length = len(source.url)
+        url_length = len(source.normalized_url)
+        annotation_length = len(annotation_addition)
         meta_text = 4
         text_length = 500 - url_length - meta_text - annotation_length
-        toot_text = f"🔖 {source.title[:text_length]} {source.url}{annotation_addition}"
+        toot_text = f"🔖 {source.title[:text_length]} {source.normalized_url}{annotation_addition}"
 
         if config.dry_run:
             logger.info(f"Would have tooted: {toot_text}")

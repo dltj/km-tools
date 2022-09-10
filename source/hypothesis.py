@@ -45,11 +45,6 @@ class HypothesisResource(WebResource):
         search_cur.execute(query, [uri])
         row = search_cur.fetchone()
         if row:
-            if match := self.docdrop_url_scan.match(uri):
-                annotation_url = uri
-                uri = f"https://youtube.com/watch?v={match.group(1)}"
-            else:
-                annotation_url = f"https://via.hypothes.is/{uri}"
             super().__init__(
                 uri=uri,
                 title=row["title"],
@@ -61,7 +56,16 @@ class HypothesisResource(WebResource):
                 raise exceptions.MoreThanOneError(uri)
         else:
             raise exceptions.ResourceNotFoundError(uri)
-        self.annotation_url = annotation_url
+        if match := self.docdrop_url_scan.match(uri):
+            logger.debug(f"Found DocDrop match for {uri}; adjusting URLs.")
+            self.annotation_url = uri
+            self.normalized_url = f"https://youtube.com/watch?v={match.group(1)}"
+        else:
+            self.annotation_url = f"https://via.hypothes.is/{uri}"
+            self.normalized_url = uri
+        logger.debug(
+            f"Normalized {uri}: {self.normalized_url}; Annotation for {uri}: {self.annotation_url}"
+        )
 
 
 class HypothesisAnnotationOrigin(Origin):
