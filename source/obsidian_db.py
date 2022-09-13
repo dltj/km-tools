@@ -3,6 +3,7 @@ from time import gmtime, strftime
 
 import arrow
 from config import config
+from util.obsidian import title_to_page
 
 from source import Resource
 
@@ -70,7 +71,7 @@ class ObsidianDb:
             - Full path to the page in the Obsidian database
             - Filename portion of page path
         """
-        filename = source_title.strip().replace(":", "—").replace("/", "-")[:250]
+        filename = title_to_page(source_title)
         return self.page_to_path(filename, folder="source"), filename
 
     def page_to_path(self, page, folder=None):

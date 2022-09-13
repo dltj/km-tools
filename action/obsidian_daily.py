@@ -95,12 +95,12 @@ Grateful for::
                 if source.origin.obsidian_tagless and not source.tags:
                     logger.info(f"Adding source with no tags: {source.title}")
                     daily_fh.write(
-                        f"* Bookmark: [{source.headline}]({source.uri}) ({source.publisher}): {source.description}\n"
+                        f"* Bookmark: [{source.headline}]({source.uri}) ({source.publisher}): {source.description or ''}\n"
                     )
                 else:
                     logger.info(f"Source with tags; link to '{source.title}'")
                     daily_fh.write(
-                        f"* {type(source).__name__}: [[{source.headline}]] ({source.publisher})\n"
+                        f"* {type(source).__name__}: [[{obsidian.title_to_page(source.headline)}]] ({source.publisher or ''})\n"
                     )
                 if not config.dry_run:
                     obsidian_daily_action.record(source, daily_page)
