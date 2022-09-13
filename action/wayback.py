@@ -7,8 +7,7 @@ import click
 import exceptions
 import requests
 from config import config
-from source import Origin, Resource
-from source.pinboard import PinboardResource
+from source import Origin, Resource, WebResource
 
 from action import Action
 
@@ -23,10 +22,10 @@ class Wayback(Action):
     def __init__(self) -> None:
         super().__init__()
 
-    def url_action(self, source: PinboardResource):
+    def url_action(self, source: WebResource):
         """Archive at Wayback
 
-        :param url: str, URL to save in Wayback
+        :param source (WebResource): instance of a web resource
 
         :returns: None
         """
