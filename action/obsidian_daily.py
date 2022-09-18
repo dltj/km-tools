@@ -35,7 +35,7 @@ class ObsidianDaily(Action):
         db = config.kmtools_db
         for origin in [
             pinboard.pinboard_origin,
-            hypothesis.hypothesis_annotation_origin,
+            hypothesis.hypothesis_page_origin,
         ]:
             search_cur = db.cursor()
             query = (
