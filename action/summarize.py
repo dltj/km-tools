@@ -73,13 +73,17 @@ def summarize(source: WebResource = None):
 
     # Fetch and extract main body of webpage from URL
     downloaded = trafilatura.fetch_url(source.url)
+    if not downloaded:
+        logger.warning("Couldn't fetch content of {source.url}")
+        return
+
     metadata = trafilatura.extract_metadata(
         downloaded,
         default_url=source.url,
         date_config={"extensive_search": True},
     )
-    if metadata and metadata["date"]:
-        derived_date = metadata["date"]
+    if metadata and metadata.date:
+        derived_date = metadata.date
     else:
         derived_date = "unknown"
 

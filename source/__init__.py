@@ -117,9 +117,10 @@ class WebResource(Resource):
         if title:
             if match := title_scan.match(title):
                 headline = f"{match.group(1)}"
-                if match.group(3):
-                    headline = f"{headline} – {match.group(3)}"
-                description = f"_{match.group(5)}_\n\n{description}"
+                if title_comment := match.group(3):
+                    description = f"_{title_comment}_\n\n{description}"
+                if headline_extra := match.group(5):
+                    headline = f"{headline} – {headline_extra}"
                 publisher = match.group(6)
             else:
                 headline = title

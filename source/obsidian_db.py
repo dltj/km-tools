@@ -116,8 +116,10 @@ class ObsidianDb:
                     f"publisher: {source.publisher}\n"
                     "---\n"
                     f"Automated summary:: {source.summary}\n\n"
-                    f"Tags:: {tags}\n\n"
                 )
+                if source.description:
+                    source_fd.write(f"{source.description}\n\n")
+                source_fd.write(f"Tags:: {tags}\n\n")
         return output_filepath, output_filename
 
 
