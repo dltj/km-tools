@@ -2,10 +2,12 @@ import datetime
 import json
 import logging
 import re
+import typing as ty
 
 import click
 import exceptions
 import requests
+from bs4 import BeautifulSoup
 from config import config
 
 from source import Annotation, Origin, WebResource
@@ -38,7 +40,7 @@ class HypothesisResource(WebResource):
         re.X,
     )
 
-    def __init__(self, uri) -> None:
+    def __init__(self, uri: str) -> None:
         db = config.kmtools_db
         search_cur = db.cursor()
         query = "SELECT * FROM hyp_pages WHERE uri=:uri"
@@ -60,12 +62,31 @@ class HypothesisResource(WebResource):
             logger.debug(f"Found DocDrop match for {uri}; adjusting URLs.")
             self.annotation_url = uri
             self.normalized_url = f"https://youtube.com/watch?v={match.group(1)}"
+        elif uri.startswith("https://media.dltj.org/unchecked-transcript/"):
+            (
+                self.annotation_url,
+                self.normalized_url,
+                self.title,
+                self.publisher,
+            ) = self.transcript_urls(uri)
         else:
             self.annotation_url = f"https://via.hypothes.is/{uri}"
             self.normalized_url = uri
         logger.debug(
             f"Normalized {uri}: {self.normalized_url}; Annotation for {uri}: {self.annotation_url}"
         )
+
+    def transcript_urls(self, uri: str) -> ty.Tuple[str, str, str, str]:
+        page = requests.get(uri)
+        page.raise_for_status()
+        soup = BeautifulSoup(page.content, "html.parser")
+        episode_id = soup.find("a", id="episode")
+        podcast_id = soup.find("span", id="podcast")
+        annotation_url = uri
+        normalized_url = episode_id["href"]
+        title = episode_id.text
+        publisher = podcast_id.text
+        return annotation_url, normalized_url, title, publisher
 
 
 class HypothesisAnnotationOrigin(Origin):
