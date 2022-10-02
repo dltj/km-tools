@@ -6,6 +6,7 @@ import re
 import nltk
 import trafilatura
 from config import config
+from exceptions import SummarizeError
 from source import Origin, Resource, WebResource
 
 from action import Action
@@ -28,7 +29,10 @@ class Summarize(Action):
 
         :returns: None
         """
-        derived_date, summary = summarize(source=source)
+        try:
+            derived_date, summary = summarize(source=source)
+        except SummarizeError as e:
+            return
 
         logger.info(
             f"Successfully summarized {source.uri} as {derived_date} / {summary}"
@@ -69,13 +73,16 @@ def summarize(source: WebResource = None):
     :returns:
         - derived_date: date as parsed by the Trafilatura library (string)
         - summary: 7 highest scoring sentences or 50 most common words
+
+    :raises:
+        - SummarizeException: when Trafilatura returns an error.
     """
 
     # Fetch and extract main body of webpage from URL
     downloaded = trafilatura.fetch_url(source.url)
     if not downloaded:
-        logger.warning("Couldn't fetch content of {source.url}")
-        return
+        logger.warning(f"Couldn't fetch content of {source.url}")
+        raise SummarizeError(f"Couldn't fetch content of {source.url}")
 
     metadata = trafilatura.extract_metadata(
         downloaded,

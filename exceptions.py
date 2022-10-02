@@ -143,3 +143,18 @@ class WaybackError(KMException):
                 )
         self.detail = message
         super().__init__(message)
+
+
+class SummarizeError(KMException):
+    """Exception raised for Summarize errors.
+
+    Attributes:
+        status_code: HTTP status code
+        response_body: HTTP response body from the endpoint
+    """
+
+    default_detail = "Error calling Wayback"
+
+    def __init__(self, message):
+        self.detail = message
+        super().__init__(message)
