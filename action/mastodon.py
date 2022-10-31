@@ -38,9 +38,10 @@ class Mastodon(Action):
 
         url_length = len(source.normalized_url)
         annotation_length = len(annotation_addition)
+        hashtag = " #BookmarkShare"
         meta_text = 4
-        text_length = 500 - url_length - meta_text - annotation_length
-        toot_text = f"🔖 {source.title[:text_length]} {source.normalized_url}{annotation_addition}"
+        text_length = 500 - url_length - meta_text - annotation_length - len(hashtag)
+        toot_text = f"🔖 {source.title[:text_length]} {source.normalized_url}{annotation_addition}{hashtag}"
 
         if config.dry_run:
             logger.info(f"Would have tooted: {toot_text}")
