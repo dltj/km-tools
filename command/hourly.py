@@ -1,6 +1,7 @@
 """ Sources and actions to perform hourly """
-import action
 import click
+
+import action
 from config import config
 from source import hypothesis, pinboard
 
@@ -17,7 +18,6 @@ def hourly(details):
 
     for origin in config.origins:
         action.summarize.summarize_action.process_new(origin)
-        action.twitter.twitter_action.process_new(origin)
         action.mastodon.mastodon_action.process_new(origin)
         action.wayback.wayback_action.process_new(origin)
 
