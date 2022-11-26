@@ -4,12 +4,12 @@ import json
 import logging
 
 import click
-import exceptions
 import requests
+
+import exceptions
+from action import Action
 from config import config
 from source import Origin, Resource, WebResource
-
-from action import Action
 
 logger = logging.getLogger(__name__)
 
@@ -64,7 +64,7 @@ class Wayback(Action):
         logger.debug(f"Wayback returned status {r.status_code}, '{r.text}'")
         if r.status_code != 200:
             logger.error(f"Couldn't save url ({r.status_code}): {r.text}")
-            raise exceptions.WaybackError(r.status_code, r.text)
+            return None
         wayback_response = r.json()
         wayback_job = wayback_response["job_id"]
         if "message" in wayback_response:
@@ -203,7 +203,7 @@ class Wayback(Action):
         logger.warning(
             f"Couldn't check status of {wayback_job} ({r.status_code}): {r.text}"
         )
-        raise exceptions.WaybackError(r.status_code, r.text)
+        return None
 
     def process_new(self, origin: Origin) -> None:
         """Process entries that have not yet been processed by this action.
