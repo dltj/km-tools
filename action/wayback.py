@@ -2,6 +2,8 @@
 import collections
 import json
 import logging
+from dataclasses import dataclass, field
+from datetime import datetime
 
 import click
 import requests
@@ -12,6 +14,18 @@ from config import config
 from source import Origin, Resource, WebResource
 
 logger = logging.getLogger(__name__)
+
+
+@dataclass
+class WaybackRecord:
+    url: str
+    wayback_url: str
+    origin: str
+    timestamp_int: int
+    timestamp: datetime = field(init=False)
+
+    def __post_init__(self):
+        self.timestamp = datetime.fromtimestamp(self.timestamp_int)
 
 
 class Wayback(Action):
@@ -219,6 +233,37 @@ class Wayback(Action):
             origin=origin,
             url_action=self.url_action,
         )
+
+    def find_entry(self, url: str) -> WaybackRecord:
+        """Returns a dataclass for a record in the Wayback database
+
+        Args:
+            url (str): url to search
+
+        Raises:
+            exceptions.MoreThanOneError: raised when there is more than one entry in the table
+            exceptions.ResourceNotFoundError: raised when the url could not be found
+
+        Returns:
+            WaybackRecord: dataclass of database record
+        """
+        db = config.kmtools_db
+        search_cur = db.cursor()
+        query = f"SELECT * FROM {self.action_table} WHERE url=:url"
+        search_cur.execute(query, [url])
+        row = search_cur.fetchone()
+        if row:
+            wayback_record = WaybackRecord(
+                url=url,
+                wayback_url=row["wayback_url"],
+                origin=row["origin"],
+                timestamp_int=int(row["timestamp"]),
+            )
+            if search_cur.fetchone():
+                raise exceptions.MoreThanOneError(url)
+        else:
+            raise exceptions.ResourceNotFoundError(url)
+        return wayback_record
 
 
 wayback_action = Wayback()

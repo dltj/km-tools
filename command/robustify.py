@@ -4,8 +4,9 @@ from string import Template
 
 import click
 from dateutil import parser
-from exceptions import MoreThanOneError
-from source import hypothesis, pinboard
+
+from action.wayback import wayback_action
+from exceptions import MoreThanOneError, ResourceNotFoundError
 
 logger = logging.getLogger(__name__)
 
@@ -35,28 +36,17 @@ logger = logging.getLogger(__name__)
 def robustify(details, style, url):
     """Output markup for a robust link"""
     logger.debug(f"Searching for {url}")
-    try:
-        webpage_pinboard = pinboard.find_entry(details, url)
-    except MoreThanOneError:
-        logger.error(f"More than one pinboard entry found for {url}. Exiting.")
-        return
 
     try:
-        webpage_hypothesis = hypothesis.find_entry(details, url)
+        webpage = wayback_action.find_entry(url)
     except MoreThanOneError:
-        logger.error(f"More than one hypothesis page found for {url}. Exiting.")
+        logger.error(f"More than one wayback entry found for {url}. Exiting.")
+        return
+    except ResourceNotFoundError:
+        logger.error(f"{url} not found in wayback database. Exiting.")
         return
 
-    if webpage_pinboard and webpage_hypothesis:
-        logger.error(f"{url} found in both Pinboard and Hypothesis. Exiting.")
-        return
-
-    if not webpage_pinboard and not webpage_hypothesis:
-        logger.warning(f"{url} not found in Pinboard and Hypothesis. Exiting.")
-        return
-
-    webpage = webpage_pinboard if webpage_pinboard else webpage_hypothesis
-    archive_date = parser.parse(webpage.archive_date).strftime("%Y-%m-%d")
+    archive_date = webpage.timestamp.isoformat()
 
     if style == "html":
         robust_template = Template(
@@ -83,10 +73,10 @@ post=''
 
     robust_string = robust_template.substitute(
         {
-            "href": webpage.href,
-            "archive_url": webpage.archive_url,
+            "href": webpage.url,
+            "archive_url": webpage.wayback_url,
             "archive_date": archive_date,
-            "title": webpage.title,
+            "title": "TITLE-PLACEHOLDER",
         }
     )
 
