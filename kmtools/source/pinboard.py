@@ -3,11 +3,11 @@ import logging
 
 import click
 import dateutil.parser
-import exceptions
 import requests
-from config import config
 
-from source import Origin, WebResource
+from kmtools import exceptions
+from kmtools.source import Origin, WebResource
+from kmtools.util.config import config
 
 logger = logging.getLogger(__name__)
 

@@ -2,7 +2,7 @@
 import re
 from abc import abstractmethod
 
-from config import config
+from kmtools.util.config import config
 
 # Annotation = collections.namedtuple(
 #     "Annotation",

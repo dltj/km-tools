@@ -5,8 +5,8 @@ from string import Template
 import click
 from dateutil import parser
 
-from action.wayback import wayback_action
-from exceptions import MoreThanOneError, ResourceNotFoundError
+from kmtools.action.wayback import wayback_action
+from kmtools.exceptions import MoreThanOneError, ResourceNotFoundError
 
 logger = logging.getLogger(__name__)
 

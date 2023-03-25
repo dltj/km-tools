@@ -4,8 +4,8 @@ from abc import ABCMeta, abstractmethod
 from logging import getLogger
 from typing import Callable, List
 
-from config import config
-from source import Origin, Resource
+from kmtools.source import Origin, Resource
+from kmtools.util.config import config
 
 logger = getLogger(__name__)
 

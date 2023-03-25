@@ -4,9 +4,9 @@ import logging
 import click
 from mastodon import Mastodon as mastodon_library
 
-from action import Action
-from config import config
-from source import Origin, Resource, WebResource
+from kmtools.action import Action
+from kmtools.source import Origin, Resource, WebResource
+from kmtools.util.config import config
 
 logger = logging.getLogger(__name__)
 

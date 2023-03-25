@@ -1,8 +1,9 @@
 """Call summarization routines."""
 
 import click
-from action import summarize
-from source import WebResource
+
+from kmtools.action import summarize
+from kmtools.source import WebResource
 
 
 @click.command(name="summarize")

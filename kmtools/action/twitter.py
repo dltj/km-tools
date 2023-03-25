@@ -1,12 +1,12 @@
 """Post to Twitter"""
 import logging
 
-import exceptions
-from config import config
-from source import Origin, Resource, WebResource
 from TwitterAPI import TwitterAPI
 
-from action import Action
+from kmtools import exceptions
+from kmtools.action import Action
+from kmtools.source import Origin, Resource, WebResource
+from kmtools.util.config import config
 
 logger = logging.getLogger(__name__)
 

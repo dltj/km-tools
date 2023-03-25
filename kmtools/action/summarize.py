@@ -7,10 +7,10 @@ import nltk
 import trafilatura
 from trafilatura.settings import use_config
 
-from action import Action
-from config import config
-from exceptions import SummarizeError
-from source import Origin, Resource, WebResource
+from kmtools.action import Action
+from kmtools.exceptions import SummarizeError
+from kmtools.source import Origin, Resource, WebResource
+from kmtools.util.config import config
 
 logger = logging.getLogger(__name__)
 

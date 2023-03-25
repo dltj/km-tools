@@ -1,5 +1,6 @@
 import click
-from action import obsidian_daily
+
+from kmtools.action import obsidian_daily
 
 
 @click.group()

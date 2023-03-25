@@ -9,11 +9,11 @@ from logging.handlers import TimedRotatingFileHandler
 import click
 from omegaconf import OmegaConf
 
-from action import mastodon, obsidian_hourly, twitter, wayback
-from command import daily, hourly, obsidian, robustify, summarize
-from config import config
-from source import hypothesis, pinboard
-from util.logging_util import PackagePathFilter
+from kmtools.action import mastodon, wayback
+from kmtools.command import daily, hourly, obsidian, robustify, summarize
+from kmtools.source import hypothesis, pinboard
+from kmtools.util.config import config
+from kmtools.util.logging_util import PackagePathFilter
 
 logger = logging.getLogger()
 

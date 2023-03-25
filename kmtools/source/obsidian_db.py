@@ -2,10 +2,10 @@ import os
 from time import gmtime, strftime
 
 import arrow
-from config import config
-from util.obsidian import title_to_page
 
-from source import Resource
+from kmtools.source import Resource
+from kmtools.util.config import config
+from kmtools.util.obsidian import title_to_page
 
 
 class ObsidianDb:

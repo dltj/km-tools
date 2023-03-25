@@ -1,9 +1,10 @@
 """ Sources and actions to perform hourly """
 import click
 
-import action
-from config import config
-from source import hypothesis, pinboard
+from kmtools import action
+from kmtools.action import obsidian_hourly
+from kmtools.source import hypothesis, pinboard
+from kmtools.util.config import config
 
 
 @click.command()
@@ -21,7 +22,7 @@ def hourly(details):
         action.mastodon.mastodon_action.process_new(origin)
         action.wayback.wayback_action.process_new(origin)
 
-    action.obsidian_hourly.obsidian_hourly_action.process_new(pinboard.pinboard_origin)
-    action.obsidian_hourly.obsidian_hourly_action.process_new(
+    obsidian_hourly.obsidian_hourly_action.process_new(pinboard.pinboard_origin)
+    obsidian_hourly.obsidian_hourly_action.process_new(
         hypothesis.hypothesis_annotation_origin
     )

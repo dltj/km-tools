@@ -2,11 +2,10 @@
 
 import logging
 
-from config import config
-from source import Annotation, Origin, Resource
-from source.obsidian_db import obsidiandb
-
-from action import Action
+from kmtools.action import Action
+from kmtools.source import Annotation, Origin, Resource
+from kmtools.source.obsidian_db import obsidiandb
+from kmtools.util.config import config
 
 logger = logging.getLogger(__name__)
 

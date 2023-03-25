@@ -5,12 +5,12 @@ import re
 import typing as ty
 
 import click
-import exceptions
 import requests
 from bs4 import BeautifulSoup
-from config import config
 
-from source import Annotation, Origin, WebResource
+from kmtools import exceptions
+from kmtools.source import Annotation, Origin, WebResource
+from kmtools.util.config import config
 
 logger = logging.getLogger(__name__)
 

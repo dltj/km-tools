@@ -2,12 +2,11 @@ import logging
 import os
 from datetime import datetime
 
-from config import config
-from source import Resource, hypothesis, pinboard
-from source.obsidian_db import obsidiandb
-from util import obsidian
-
-from action import Action
+from kmtools.action import Action
+from kmtools.source import Resource, hypothesis, pinboard
+from kmtools.source.obsidian_db import obsidiandb
+from kmtools.util import obsidian
+from kmtools.util.config import config
 
 logger = logging.getLogger(__name__)
 
