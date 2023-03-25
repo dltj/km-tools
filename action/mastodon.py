@@ -2,11 +2,11 @@
 import logging
 
 import click
-from config import config
-from source import Origin, Resource, WebResource
+from mastodon import Mastodon as mastodon_library
 
 from action import Action
-from mastodon import Mastodon as mastodon_library
+from config import config
+from source import Origin, Resource, WebResource
 
 logger = logging.getLogger(__name__)
 

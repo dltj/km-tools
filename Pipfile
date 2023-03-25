@@ -6,7 +6,6 @@ name = "pypi"
 [packages]
 pinboard-to-sqlite = "*"
 click = "*"
-kmtools = {editable = true, path = "."}
 twitterapi = "*"
 omegaconf = "*"
 requests = "*"
@@ -15,6 +14,7 @@ arrow = "*"
 trafilatura = "*"
 nltk = "*"
 beautifulsoup4 = "*"
+kmtools = {editable = true, path = "."}
 
 [dev-packages]
 jedi = "*"

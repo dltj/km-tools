@@ -81,9 +81,14 @@ LIST FROM #{datetime.today().strftime('%d-%b')}
 ```
 
 ## Morning Notes
-Dream:: 
-Morning comments:: 
-Grateful for:: 
+
+### Dream
+
+### Daily Priority
+
+### Morning Gratitude
+
+### What's on My Mind
 
 ## Yesterday's readings
 """
