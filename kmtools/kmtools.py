@@ -9,8 +9,8 @@ from logging.handlers import TimedRotatingFileHandler
 import click
 from omegaconf import OmegaConf
 
-from kmtools.action import mastodon, wayback
-from kmtools.command import daily, hourly, obsidian, robustify, summarize
+from kmtools.action import mastodon
+from kmtools.command import daily, hourly, obsidian, robustify, summarize, wayback
 from kmtools.source import hypothesis, pinboard
 from kmtools.util.config import config
 from kmtools.util.logging_util import PackagePathFilter
