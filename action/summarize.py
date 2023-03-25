@@ -5,11 +5,12 @@ import re
 
 import nltk
 import trafilatura
+from trafilatura.settings import use_config
+
+from action import Action
 from config import config
 from exceptions import SummarizeError
 from source import Origin, Resource, WebResource
-
-from action import Action
 
 logger = logging.getLogger(__name__)
 
@@ -78,8 +79,14 @@ def summarize(source: WebResource = None):
         - SummarizeException: when Trafilatura returns an error.
     """
 
+    trafilatura_config = use_config()
+    trafilatura_config.set(
+        "DEFAULT",
+        "USER_AGENTS",
+        "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/109.0.0.0 Safari/537.36",
+    )
     # Fetch and extract main body of webpage from URL
-    downloaded = trafilatura.fetch_url(source.url)
+    downloaded = trafilatura.fetch_url(source.url, config=trafilatura_config)
     if not downloaded:
         logger.warning(f"Couldn't fetch content of {source.url}")
         raise SummarizeError(f"Couldn't fetch content of {source.url}")
