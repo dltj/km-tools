@@ -264,6 +264,29 @@ class Wayback(Action):
             raise exceptions.ResourceNotFoundError(url)
         return wayback_record
 
+    def find_stalled(self) -> list[WaybackRecord]:
+        """Searches the database for stalled Wayback jobs
+
+        Returns:
+            list(WaybackRecord): list of database records
+        """
+        db = config.kmtools_db
+        search_cur = db.cursor()
+        query = f"SELECT * FROM {self.action_table} WHERE wayback_url LIKE 'spn%'"
+        search_cur.execute(query)
+
+        stalled_rows = list()
+        for row in search_cur:
+            wayback_record = WaybackRecord(
+                url=row["url"],
+                wayback_url=row["wayback_url"],
+                origin=row["origin"],
+                timestamp_int=int(row["timestamp"]),
+            )
+            stalled_rows.append(wayback_record)
+
+        return stalled_rows
+
 
 wayback_action = Wayback()
 config.actions.append(wayback_action)

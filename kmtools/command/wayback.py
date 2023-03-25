@@ -1,5 +1,6 @@
 """_Wayback commands_"""
 import logging
+from datetime import datetime
 
 import click
 
@@ -61,3 +62,28 @@ def update_job_command(job_id=None):
     if job_id:
         message = wayback_action.update_job(job_id)
         click.echo(message)
+
+
+@wayback.command(name="hung")
+def hung_jobs():
+    """List hung Wayback jobs
+
+    Args:
+        details (_type_): Context object
+    """
+    stalled_rows = wayback_action.find_stalled()
+    if stalled_rows:
+        fmt_str = "{:13.13s}  {:31.31s}  {:s}"
+        click.echo(fmt_str.format("Origin", "Saved", "URL"))
+        click.echo("Wayback URL\n")
+        for row in stalled_rows:
+            click.echo(
+                fmt_str.format(
+                    row.origin,
+                    row.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                    row.url,
+                ),
+            )
+            click.echo(f"https://web.archive.org/web/2023*/{row.url}\n")
+    else:
+        click.echo(click.style("No hung jobs found.", fg="green"))
