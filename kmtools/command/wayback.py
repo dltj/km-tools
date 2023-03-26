@@ -1,6 +1,5 @@
 """_Wayback commands_"""
 import logging
-from datetime import datetime
 
 import click
 
@@ -66,11 +65,7 @@ def update_job_command(job_id=None):
 
 @wayback.command(name="hung")
 def hung_jobs():
-    """List hung Wayback jobs
-
-    Args:
-        details (_type_): Context object
-    """
+    """List hung Wayback jobs"""
     stalled_rows = wayback_action.find_stalled()
     if stalled_rows:
         fmt_str = "{:13.13s}  {:31.31s}  {:s}"
