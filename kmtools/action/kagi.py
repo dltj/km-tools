@@ -40,7 +40,7 @@ class Kagi(Action):
         try:
             response_json = r.json()
             if "error" in response_json:
-                raise RuntimeError(f"Kagi returned {response_json['error']['msg']}")
+                raise RuntimeError(f"Kagi returned {response_json['error'][0]['msg']}")
             if "data" not in response_json or "output" not in response_json["data"]:
                 raise ValueError("Data->Output not found")
         except requests.exceptions.JSONDecodeError as ex:
