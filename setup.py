@@ -10,7 +10,7 @@ setup(
     ],
     entry_points={
         "console_scripts": [
-            "kmtools = kmtools:kmtools.cli",
+            "kmtools = kmtools:cli.cli",
         ],
     },
 )
