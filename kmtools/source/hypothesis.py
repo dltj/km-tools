@@ -39,6 +39,9 @@ class HypothesisResource(WebResource):
     """,
         re.X,
     )
+    dltjvid_url_scan = re.compile(
+        r"https?://media.dltj.org/annotated-video/[\dT]+-([0-9A-Za-z_-]{10}[048AEIMQUYcgkosw])-"
+    )
 
     def __init__(self, uri: str) -> None:
         db = config.kmtools_db
@@ -60,6 +63,12 @@ class HypothesisResource(WebResource):
             raise exceptions.ResourceNotFoundError(uri)
         if match := self.docdrop_url_scan.match(uri):
             logger.debug(f"Found DocDrop match for {uri}; adjusting URLs.")
+            self.annotation_url = uri
+            self.normalized_url = f"https://youtube.com/watch?v={match.group(1)}"
+        elif match := self.dltjvid_url_scan.match(uri):
+            logger.debug(
+                f"Found DLTJ video annotation match for {uri}; adjusting URLs."
+            )
             self.annotation_url = uri
             self.normalized_url = f"https://youtube.com/watch?v={match.group(1)}"
         elif uri.startswith("https://media.dltj.org/unchecked-transcript/"):
