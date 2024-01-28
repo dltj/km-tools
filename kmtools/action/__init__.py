@@ -54,7 +54,10 @@ class Action(object):
         values = [url]
         logger.debug(f"{query=} for {values=}")
         search_cur.execute(query, values)
-        result = search_cur.fetchone()[0]
+        if result := search_cur.fetchone():
+            result = result[0]
+        else:
+            result = ""
         logger.debug(f"{result=}")
         return result
 
