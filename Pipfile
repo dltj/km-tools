@@ -15,6 +15,7 @@ trafilatura = "*"
 nltk = "*"
 beautifulsoup4 = "*"
 kmtools = {editable = true, path = "."}
+psutil = "*"
 
 [dev-packages]
 jedi = "*"

@@ -2,21 +2,24 @@
 # encoding: utf-8
 """Knowledge Management CLI."""
 
+import getpass
 import logging
 import sys
+import time
 from logging.handlers import TimedRotatingFileHandler
 
 import click
+import psutil
 from omegaconf import OmegaConf
 
 from kmtools.action import mastodon
-from kmtools.command import daily, hourly, obsidian, robustify, summarize, wayback
+from kmtools.command import (daily, hourly, obsidian, robustify, summarize,
+                             wayback)
 from kmtools.source import hypothesis, pinboard
 from kmtools.util.config import config
 from kmtools.util.logging_util import PackagePathFilter
 
 logger = logging.getLogger()
-
 
 @click.group(context_settings={"help_option_names": ["-h", "--help"]})
 @click.option("--dry-run", is_flag=True)
@@ -68,6 +71,22 @@ def cli(ctx, dry_run, debug, verbose, logfile):
         logger.setLevel(logging.WARNING)
 
     ctx.obj = config
+
+    ## If there is an instance of us that has been running for over 60 seconds, kill it
+    for proc in psutil.process_iter(['pid','name','cmdline','username']):
+        if proc.info['username'] != getpass.getuser() or proc.info['name'].casefold() != 'python':
+            continue
+        if len(proc.info['cmdline']) > 1 and 'kmtools' in proc.info['cmdline'][1]:
+            runtime = int(time.time()) - int(proc.create_time())
+            if runtime < 60:
+                continue
+            logger.warning("PID %s running for %s seconds; killing.", proc.info['pid'], runtime)
+            proc.terminate()
+            try:
+                proc.wait(timeout=10)
+            except psutil.TimeoutExpired:
+                proc.kill()
+
 
 
 # Register commands
