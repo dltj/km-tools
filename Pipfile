@@ -5,7 +5,6 @@ name = "pypi"
 
 [packages]
 pinboard-to-sqlite = "*"
-click = "*"
 twitterapi = "*"
 omegaconf = "*"
 requests = "*"
@@ -16,13 +15,16 @@ nltk = "*"
 beautifulsoup4 = "*"
 kmtools = {editable = true, path = "."}
 psutil = "*"
+click = "*"
+black = "*"
 
 [dev-packages]
 jedi = "*"
 pylint = "*"
+black = "*"
 
 [requires]
-python_version = "3.9"
+python_version = "3.12.2"
 
 [pipenv]
 allow_prereleases = true
