@@ -1,4 +1,5 @@
 """Get summary of item"""
+
 import heapq
 import logging
 import re
@@ -16,11 +17,10 @@ logger = logging.getLogger(__name__)
 
 
 class Summarize(Action):
+    """Summarize a document using Trafilatura"""
+
     attributes_supplied = ["summary", "derived_date"]
     action_table = "action_summary"
-
-    def __init__(self) -> None:
-        super().__init__()
 
     def url_action(self, source: WebResource):
         """
@@ -32,11 +32,11 @@ class Summarize(Action):
         """
         try:
             derived_date, summary = summarize(source=source)
-        except SummarizeError as e:
+        except SummarizeError:
             return
 
         logger.info(
-            f"Successfully summarized {source.uri} as {derived_date} / {summary}"
+            "Successfully summarized %s as %s / %s", source.uri, derived_date, summary
         )
         Action._save_attributes(
             self, source, self.attributes_supplied, [summary, derived_date]
@@ -88,7 +88,7 @@ def summarize(source: WebResource = None):
     # Fetch and extract main body of webpage from URL
     downloaded = trafilatura.fetch_url(source.url, config=trafilatura_config)
     if not downloaded:
-        logger.warning(f"Couldn't fetch content of {source.url}")
+        logger.warning("Couldn't fetch content of %s", source.url)
         raise SummarizeError(f"Couldn't fetch content of {source.url}")
 
     metadata = trafilatura.extract_metadata(
@@ -110,11 +110,11 @@ def summarize(source: WebResource = None):
 
     # Removing special characters and digits
     if raw_text is None:
-        logger.info(f"No summarization from {source.url}")
+        logger.info("No summarization from %s", source.url)
         return None, None
     # Remove timestamps on lines by themselves
     raw_text = re.sub(r"\n[0-9]+:[0-9]+:[0-9]+\n", " ", raw_text)
-    logger.debug(f"{raw_text=}")
+    logger.debug("raw_text=%s", raw_text)
 
     normalized_raw_text = re.sub("[^a-zA-Z']", " ", raw_text)
     normalized_raw_text = re.sub(r"\s+", " ", normalized_raw_text)

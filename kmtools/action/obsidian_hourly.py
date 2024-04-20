@@ -11,6 +11,10 @@ logger = logging.getLogger(__name__)
 
 
 class ObsidianHourly(Action):
+    """Class representing the Obsidian Hourly Action"""
+
+    key_attribute = "obsidian_filepath"
+    additional_attributes = list()
     attributes_supplied = ["obsidian_filepath"]
     action_table = "action_obsidian"
 
@@ -28,18 +32,18 @@ class ObsidianHourly(Action):
             page_source = source
         if page_source.origin.obsidian_tagless and len(page_source.tags) == 0:
             obsidian_filename = None
-            obsidian_filepath = None
-            logger.info(f"Tagless source {page_source.uri} not added to Obsidian")
-            return
-
-        obsidian_filepath, obsidian_filename = obsidiandb.init_source(page_source)
-
-        if isinstance(source, Annotation):
-            source.output_annotation(obsidian_filepath)
-
-        logger.info(
-            f"Successfully added {source.uri} to Obsidian as {obsidian_filename} ({obsidian_filepath})"
-        )
+            obsidian_filepath = "No tags"
+            logger.info("Tagless source %s not added to Obsidian", page_source.uri)
+        else:
+            obsidian_filepath, obsidian_filename = obsidiandb.init_source(page_source)
+            if isinstance(source, Annotation):
+                source.output_annotation(obsidian_filepath)
+            logger.info(
+                "Successfully added %s to Obsidian as %s (%s)",
+                source.uri,
+                obsidian_filename,
+                obsidian_filepath,
+            )
 
         Action._save_attributes(
             self, source, self.attributes_supplied, [obsidian_filepath]

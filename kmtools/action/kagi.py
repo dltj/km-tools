@@ -1,4 +1,5 @@
 """Use Kagi APIs to retrieve information"""
+
 import logging
 
 import requests
@@ -11,6 +12,8 @@ logger = logging.getLogger(__name__)
 
 
 class Kagi(Action):
+    """Use the Kagi AI summarizer"""
+
     def retrieve_summary(self, origin_url: str) -> str:
         """Call the Kagi summarize API to retrieve summary
 
@@ -24,7 +27,9 @@ class Kagi(Action):
         kagi_headers = {"Accept": "application/json"}
 
         logger.debug(
-            f"Calling Kagi Summarize with {kagi_params} and headers {kagi_headers} plus auth"
+            "Calling Kagi Summarize with %s and headers %s plus auth",
+            kagi_params,
+            kagi_headers,
         )
         kagi_headers["Authorization"] = f"Bot {config.settings.kagi.api_token}"
         r = requests.get(
@@ -32,7 +37,7 @@ class Kagi(Action):
             headers=kagi_headers,
             params=kagi_params,
         )
-        logger.debug(f"Kagi returned {r.content}")
+        logger.debug("Kagi returned %s", r.content)
         r.raise_for_status()
         try:
             response_json = r.json()

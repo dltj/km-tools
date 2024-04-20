@@ -14,7 +14,7 @@ from kmtools.source import WebResource
 @click.option("-k", "--kagi", is_flag=True, default=False, help="Get summary from Kagi")
 @click.argument("url")
 @click.pass_obj
-def summarize_command(details, url=None, quiet=False, kagi=False) -> None:
+def summarize_command(_, url=None, quiet=False, kagi=False) -> None:
     """Output a summarization of the specified URL
 
     :param details: Context object

@@ -11,6 +11,8 @@ logger = getLogger(__name__)
 
 
 class Action(object):
+    """Abstract base class of all actions"""
+
     __metaclass__ = ABCMeta
 
     attributes_supplied = list()
@@ -35,16 +37,17 @@ class Action(object):
         query = (
             f"SELECT origin.{origin.origin_key} FROM {origin.origin_table} origin "
             f"LEFT JOIN {action_table} action ON action.url=origin.{origin.origin_key} "
-            f"WHERE action.url IS NULL"
+            f"WHERE action.url IS NULL"  # sometimes →  OR {self.attributes_supplied[0]} IS NULL
         )
-        logger.debug(f"Executing {query=}")
+        logger.debug("Executing query %s", query)
         for row in search_cur.execute(query):
-            logger.info(f"Now {row[origin.origin_key]} of {origin.origin_name}")
+            logger.info("Now %s of %s", row[origin.origin_key], origin.origin_name)
             source = origin.make_resource(uri=row[origin.origin_key])
             url_action(source=source)
 
     @abstractmethod
-    def attribute_read(source: Resource, name: str) -> str:
+    def attribute_read(self, source: Resource, name: str) -> str:
+        """Not implemented at this class hiearchy level"""
         raise NotImplementedError("attribute_read not implemented")
 
     def _attribute_read(self, name: str, action_table: str, url: str) -> str:
@@ -52,13 +55,13 @@ class Action(object):
         search_cur = db.cursor()
         query = f"SELECT {name} FROM {action_table} WHERE url LIKE ?"
         values = [url]
-        logger.debug(f"{query=} for {values=}")
+        logger.debug("query=%s for values=%s", query, values)
         search_cur.execute(query, values)
         if result := search_cur.fetchone():
             result = result[0]
         else:
             result = ""
-        logger.debug(f"{result=}")
+        logger.debug("Result is%s ", result)
         return result
 
     def _save_attributes(
@@ -93,6 +96,6 @@ class Action(object):
         values = (
             values + attributes + attributes + [source.uri, source.origin.origin_name]
         )
-        logger.debug(f"With {query=}, inserting {values=}")
+        logger.debug("With %s, inserting %s", query, values)
         insert_cur.execute(query, values)
         db.commit()
