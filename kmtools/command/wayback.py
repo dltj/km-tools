@@ -79,6 +79,6 @@ def hung_jobs():
                     row.url,
                 ),
             )
-            click.echo(f"https://web.archive.org/web/2023*/{row.url}\n")
+            click.echo(f"https://web.archive.org/web/2024*/{row.url}\n")
     else:
         click.echo(click.style("No hung jobs found.", fg="green"))

@@ -32,9 +32,6 @@ class Wayback(Action):
     attributes_supplied = ("wayback_url", "wayback_timestamp", "wayback_details")
     action_table = "action_wayback"
 
-    def __init__(self) -> None:
-        super().__init__()
-
     def url_action(self, source: WebResource):
         """Archive at Wayback
 
@@ -63,28 +60,35 @@ class Wayback(Action):
         }
         wayback_endpoint = "https://web.archive.org/save"
         logger.debug(
-            f"Calling {wayback_endpoint}, {wayback_headers=} (plus auth), {wayback_body=}"
-        )
+            "Calling %s, headers=%s (plus auth), %s", wayback_endpoint, wayback_headers, wayback_body)
         wayback_headers[
             "Authorization"
         ] = f"LOW {config.settings.wayback.access_key}:{config.settings.wayback.secret_key}"
 
         if config.dry_run:  # pylint: disable=R1720
-            logger.info(f"Would have archived: {source.uri}")
+            logger.info("Would have archived: %s", source.uri)
             return
 
         r = requests.post(wayback_endpoint, headers=wayback_headers, data=wayback_body)
-        logger.debug(f"Wayback returned status {r.status_code}, '{r.text}'")
+        logger.debug("Wayback returned status %s, '%s'", r.status_code, r.text)
         if r.status_code != 200:
-            logger.error(f"Couldn't save url ({r.status_code}): {r.text}")
+            logger.error("Couldn't save url %s (%s): %s", source.uri, r.status_code, r.text)
             return None
-        wayback_response = r.json()
+        try:
+            wayback_response = r.json()
+        except requests.exceptions.JSONDecodeError:
+            logger.error("JSON not returned; wayback response body: '%s'", r.content)
+            return None
+        if "status" in wayback_response and wayback_response["status"]=="error":
+            logger.error("Wayback returned error status; wayback response body: '%s'", r.content)
+            return None
+        if "job_id" not in wayback_response:
+            logger.error("Wayback job_id not returned; wayback response body: '%s'", r.content)
+            return None
         wayback_job = wayback_response["job_id"]
         if "message" in wayback_response:
-            logger.warning(f"Wayback said: {wayback_response['message']}")
-            return wayback_job
-
-        logger.info(f"Successfully added {source.uri} to Wayback")
+            logger.warning("Wayback said: %s", wayback_response['message'])
+        logger.info("Successfully added %s to Wayback", source.uri)
         Action._save_attributes(self, source, ["wayback_url"], [wayback_job])
         return wayback_job
 
@@ -100,7 +104,7 @@ class Wayback(Action):
         search_cur = db.cursor()
         query = f"SELECT * FROM {self.action_table} WHERE wayback_url LIKE 'spn2-%'"
         for row in search_cur.execute(query):
-            logger.info(f"Checking status of {row['url']}")
+            logger.info("Checking status of %s", row['url'])
             self.update_job(row["wayback_url"])
 
     def update_job(self, wayback_job=None):
@@ -121,7 +125,7 @@ class Wayback(Action):
                     json.dumps(results.details),
                     wayback_job,
                 ]
-                logger.debug(f"With {query=}, inserting {values=}")
+                logger.debug("With query=%s, inserting values=%s", query, values)
                 insert_cur.execute(query, values)
                 db.commit()
                 return f"{results.original_url} saved as {results.wayback_url}"
@@ -154,7 +158,7 @@ class Wayback(Action):
         }
         wayback_endpoint = f"https://web.archive.org/save/status/{wayback_job}"
         logger.debug(
-            f"Calling endpoint {wayback_endpoint},  {wayback_headers=} (plus auth)"
+            "Calling endpoint %s, headers=%s (plus auth)", wayback_endpoint, wayback_headers
         )
         wayback_headers[
             "Authorization"
@@ -174,7 +178,7 @@ class Wayback(Action):
             ],
         )
         if config.dry_run:  # pylint: disable=R1720
-            logger.info(f"Would have checked status of: {wayback_endpoint}")
+            logger.info("Would have checked status of: %s", wayback_endpoint)
             results = Wayback(
                 False,  # completed
                 False,  # in_progress
@@ -188,7 +192,7 @@ class Wayback(Action):
             return results
 
         r = requests.get(wayback_endpoint, headers=wayback_headers)
-        logger.debug(f"Returned status {r.status_code}, '{r.text}'")
+        logger.debug("Returned status %s, '%s'", r.status_code, r.text)
         if r.status_code == 200:
             wayback_details = r.json()
             wayback_status = wayback_details["status"]
@@ -200,7 +204,7 @@ class Wayback(Action):
             if "timestamp" in wayback_details:
                 wayback_timestamp = wayback_details["timestamp"]
                 wayback_url = f"https://web.archive.org/{wayback_timestamp}/{wayback_original_url}"
-            logger.info(f"Job {wayback_job} is {wayback_status}")
+            logger.info("Job %s is %s", wayback_job, wayback_status)
             results = Wayback(
                 wayback_status == "success",  # completed
                 wayback_status == "pending",  # in_progress
@@ -214,7 +218,7 @@ class Wayback(Action):
             return results
 
         logger.warning(
-            f"Couldn't check status of {wayback_job} ({r.status_code}): {r.text}"
+            "Couldn't check status of %s (%s): %s", wayback_job, r.status_code, r.text
         )
         return None
 
