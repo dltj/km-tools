@@ -61,7 +61,7 @@ class Action(object):
             result = result[0]
         else:
             result = ""
-        logger.debug("Result is%s ", result)
+        logger.debug("Result is %s ", result)
         return result
 
     def _save_attributes(

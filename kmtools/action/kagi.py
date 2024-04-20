@@ -6,6 +6,7 @@ import requests
 
 from kmtools.action import Action
 from kmtools.exceptions import SummarizeError
+from kmtools.source import Origin, Resource, WebResource
 from kmtools.util.config import config
 
 logger = logging.getLogger(__name__)
@@ -13,6 +14,44 @@ logger = logging.getLogger(__name__)
 
 class Kagi(Action):
     """Use the Kagi AI summarizer"""
+
+    attributes_supplied = ["kagi_summary"]
+    action_table = "action_kagi"
+
+    def url_action(self, source: WebResource) -> None:
+        """Store summary from the Kagi AI Summarizer in table
+
+        :param source: Instance of class WebResource
+        :type source: WebResource
+        :returns: None
+        """
+        try:
+            summary = self.retrieve_summary(source.uri)
+        except (SummarizeError, ValueError) as ex:
+            logger.error("Kagi summarizer exception %s for %s", ex, source.uri)
+            return
+        logger.info("Successfully summarized %s as %s", source.uri, summary)
+
+        Action._save_attributes(self, source, self.attributes_supplied, [summary])
+        return
+
+    def attribute_read(self, source: Resource, name: str) -> str:
+        return Action._attribute_read(self, name, self.action_table, source.uri)
+
+    def process_new(self, origin: Origin) -> None:
+        """Process entries that have not yet been processed by this action.
+
+        :param origin: Instance of class Origin that we are processing
+
+        :return: None
+        """
+
+        Action.process_new(
+            self,
+            action_table=self.action_table,
+            origin=origin,
+            url_action=self.url_action,
+        )
 
     def retrieve_summary(self, origin_url: str) -> str:
         """Call the Kagi summarize API to retrieve summary
@@ -52,3 +91,4 @@ class Kagi(Action):
 
 
 kagi_action = Kagi()
+config.actions.append(kagi_action)

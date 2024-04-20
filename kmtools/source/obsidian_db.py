@@ -115,6 +115,7 @@ class ObsidianDb:
                     f"source_created: {source.derived_date}\n"
                     f"publisher: {source.publisher}\n"
                     "---\n"
+                    f"Kagi summary:: {source.kagi_summary}\n\n"
                     f"Automated summary:: {source.summary}\n\n"
                 )
                 if source.description:
