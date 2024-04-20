@@ -16,7 +16,7 @@ beautifulsoup4 = "*"
 kmtools = {editable = true, path = "."}
 psutil = "*"
 click = "*"
-black = "*"
+lxml = "*"
 
 [dev-packages]
 jedi = "*"
