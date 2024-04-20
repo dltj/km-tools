@@ -14,9 +14,6 @@ class ObsidianHourly(Action):
     attributes_supplied = ["obsidian_filepath"]
     action_table = "action_obsidian"
 
-    def __init__(self) -> None:
-        super().__init__()
-
     def url_action(self, source: Resource) -> None:
         """
         Add the source to the Obsidian database

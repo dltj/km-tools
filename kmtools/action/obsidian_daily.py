@@ -57,12 +57,16 @@ def daily(details):
 
     # Test to see if daily page already exists
     daily_page = obsidiandb.daily_page_path()
-    if os.path.exists(daily_page) and not details.dry_run:
+    if (
+        os.path.exists(daily_page)
+        and os.stat(daily_page).st_size == 0
+        and not details.dry_run
+    ):
         logger.warning(f"Daily page {daily_page} already exists.")
         return
 
     # Make daily note navigation
-    logger.info(f"Creating daily note file for today")
+    logger.info(f"Creating daily note file for today: {daily_page}")
     with details.output_fd(daily_page) as daily_fh:
         daily_fh.write(
             f"""---
@@ -97,12 +101,16 @@ LIST FROM #{datetime.today().strftime('%d-%b')}
         for source in obsidian_daily_action.new_sources():
             if source.headline not in seen_headlines:
                 if source.origin.obsidian_tagless and not source.tags:
-                    logger.info(f"Adding source with no tags: {source.title}")
+                    logger.info(
+                        f"Adding source with no tags to daily page: {source.title}"
+                    )
                     daily_fh.write(
                         f"* Bookmark: [{source.headline}]({source.uri}) ({source.publisher}): {source.description or ''}\n"
                     )
                 else:
-                    logger.info(f"Source with tags; link to '{source.title}'")
+                    logger.info(
+                        f"Source with tags to daily page; link to '{source.title}'"
+                    )
                     daily_fh.write(
                         f"* {type(source).__name__}: [[{obsidian.title_to_page(source.headline)}]] ({source.publisher or ''})\n"
                     )
@@ -110,7 +118,7 @@ LIST FROM #{datetime.today().strftime('%d-%b')}
                     obsidian_daily_action.record(source, daily_page)
                 seen_headlines.append(source.headline)
 
-        daily_fh.write("\n## Daily notes\n\n\n\n## End-of-day\n\n")
+        daily_fh.write("\n## Daily notes\n- \n\n\n## End-of-day\n\n")
         for stat in [
             "Storyworthy",
             "Positive",

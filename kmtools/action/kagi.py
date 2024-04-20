@@ -11,9 +11,6 @@ logger = logging.getLogger(__name__)
 
 
 class Kagi(Action):
-    def __init__(self) -> None:
-        super().__init__()
-
     def retrieve_summary(self, origin_url: str) -> str:
         """Call the Kagi summarize API to retrieve summary
 
