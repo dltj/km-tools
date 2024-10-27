@@ -77,13 +77,17 @@ class Kagi(Action):
             params=kagi_params,
         )
         logger.debug("Kagi returned %s", r.content)
-        r.raise_for_status()
         try:
+            r.raise_for_status()
             response_json = r.json()
             if "error" in response_json:
-                raise RuntimeError(f"Kagi returned {response_json['error'][0]['msg']}")
+                raise SummarizeError(
+                    f"Kagi returned {response_json['error'][0]['msg']}"
+                )
             if "data" not in response_json or "output" not in response_json["data"]:
                 raise ValueError("Data->Output not found")
+        except requests.HTTPError as ex:
+            raise SummarizeError(r.content) from ex
         except requests.exceptions.JSONDecodeError as ex:
             raise SummarizeError(r.content) from ex
 

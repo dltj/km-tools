@@ -1,4 +1,5 @@
 """Archive at Wayback"""
+
 import collections
 import json
 import logging
@@ -65,15 +66,21 @@ class Wayback(Action):
             wayback_headers,
             wayback_body,
         )
-        wayback_headers[
-            "Authorization"
-        ] = f"LOW {config.settings.wayback.access_key}:{config.settings.wayback.secret_key}"
+        wayback_headers["Authorization"] = (
+            f"LOW {config.settings.wayback.access_key}:{config.settings.wayback.secret_key}"
+        )
 
         if config.dry_run:  # pylint: disable=R1720
             logger.info("Would have archived: %s", source.uri)
             return
 
-        r = requests.post(wayback_endpoint, headers=wayback_headers, data=wayback_body)
+        try:
+            r = requests.post(
+                wayback_endpoint, headers=wayback_headers, data=wayback_body
+            )
+        except requests.exceptions.ConnectionError as ex:
+            logger.warning("Could not connect to Archive: %s", str(ex))
+            return None
         logger.debug("Wayback returned status %s, '%s'", r.status_code, r.text)
         if r.status_code != 200:
             logger.error(
@@ -172,9 +179,9 @@ class Wayback(Action):
             wayback_endpoint,
             wayback_headers,
         )
-        wayback_headers[
-            "Authorization"
-        ] = f"LOW {config.settings.wayback.access_key}:{config.settings.wayback.secret_key}"
+        wayback_headers["Authorization"] = (
+            f"LOW {config.settings.wayback.access_key}:{config.settings.wayback.secret_key}"
+        )
 
         Wayback = collections.namedtuple(
             "Wayback",

@@ -19,10 +19,10 @@ def hourly(details):
     action.wayback.wayback_action.update_jobs()
 
     for origin in config.origins:
-        # action.summarize.summarize_action.process_new(origin)
+        action.summarize.summarize_action.process_new(origin)
         action.kagi.kagi_action.process_new(origin)
-        # action.mastodon.mastodon_action.process_new(origin)
-        # action.wayback.wayback_action.process_new(origin)
+        action.mastodon.mastodon_action.process_new(origin)
+        action.wayback.wayback_action.process_new(origin)
 
     obsidian_hourly.obsidian_hourly_action.process_new(pinboard.pinboard_origin)
     obsidian_hourly.obsidian_hourly_action.process_new(
