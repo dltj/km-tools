@@ -1,61 +1,41 @@
-import json
 import logging
+from sqlite3 import IntegrityError
 
 import click
-import dateutil.parser
 import requests
+from dateutil.parser import isoparse
+from sqlalchemy import desc, select
+from sqlalchemy.orm import Session
 
 from kmtools import exceptions
-from kmtools.source import Origin, WebResource
-from kmtools.util.config import config
+from kmtools.models import Pinboard, VisibilityEnum
+from kmtools.util import database
 
 logger = logging.getLogger(__name__)
 
 
-class PinboardOrigin(Origin):
-    origin_name = "PINBOARD"
-    origin_table = "pinb_posts"
-    origin_key = "href"
-    obsidian_tagless = True
+def get_or_create_pinboard(session, href, title, time):
+    try:
+        # Query to check if the Pinboard object already exists
+        stmt = select(Pinboard).where(Pinboard.href == href)
+        existing_pinboard = session.execute(stmt).scalars().first()
 
-    def __init__(self) -> None:
-        super().__init__()
-
-    def make_resource(self, uri: str) -> WebResource:
-        return PinboardResource(uri=uri)
-
-
-pinboard_origin = PinboardOrigin()
-config.origins.append(pinboard_origin)
-
-
-class PinboardResource(WebResource):
-
-    origin = pinboard_origin
-
-    def __init__(self) -> None:
-        super().__init__()
-        pass
-
-    def __init__(self, uri):
-        db = config.kmtools_db
-        search_cur = db.cursor()
-        query = "SELECT * FROM pinb_posts WHERE href=:uri"
-        search_cur.execute(query, [uri])
-        row = search_cur.fetchone()
-        if row:
-            super().__init__(
-                uri=uri,
-                title=row["description"],
-                description=row["extended"],
-                tags=json.loads(row["tags"]),
-                public=(row["shared"] == "1"),
+        if existing_pinboard:
+            logger.info(
+                "Found existing Pinboard object for %s: %s", href, existing_pinboard
             )
-            if search_cur.fetchone():
-                raise exceptions.MoreThanOneError(uri)
+            return existing_pinboard
         else:
-            raise exceptions.ResourceNotFoundError(uri)
-        self.toread = row["toread"] == "1"
+            # If not exists, create a new one
+            logger.info("Creating new Pinboard object for %s", href)
+            new_pinboard = Pinboard(href=href)
+            session.add(new_pinboard)
+            return new_pinboard
+
+    except IntegrityError:
+        # Handle potential race conditions, retry fetch
+        session.rollback()
+        return session.execute(stmt).scalars().first()
 
 
 @click.group()
@@ -77,61 +57,63 @@ def fetch(ctx_obj):
         "format": "json",
     }
 
-    db = ctx_obj.kmtools_db
+    with Session(database.engine) as session:
+        # Query the most recent Pinboard entry based on the 'time' column
+        stmt = select(Pinboard).order_by(desc(Pinboard.saved_timestamp)).limit(1)
 
-    since_cur = db.cursor()
-    since_date = since_cur.execute("SELECT max(time) FROM pinb_posts;").fetchone()[0]
-    if since_date:
-        params["fromdt"] = (
-            dateutil.parser.parse(since_date)
-            .replace(microsecond=0, tzinfo=None)
-            .isoformat()
-            + "Z"
+        # Execute the query
+        most_recent_pinboard = session.execute(stmt).scalars().first()
+        since_date = most_recent_pinboard.saved_timestamp
+        if since_date:
+            params["fromdt"] = (
+                since_date.replace(microsecond=0, tzinfo=None).isoformat() + "Z"
+            )
+
+        logger.debug("Calling Pinboard with %s (plus auth)", params)
+        params["auth_token"] = ctx_obj.settings.pinboard.auth_token
+
+        r = requests.get(
+            "https://api.pinboard.in/v1/posts/all", params=params, timeout=30
         )
+        if r.status_code > 200:
+            logger.debug("Couldn't call Pinboard: (%s): %s", r.status_code, r.text)
+            raise exceptions.PinboardError(r.status_code, r.text)
+        logger.debug("Got response from Pinboard")
 
-    logger.debug(f"Calling Pinboard with {params} (plus auth)")
-    params["auth_token"] = ctx_obj.settings.pinboard.auth_token
-
-    r = requests.get("https://api.pinboard.in/v1/posts/all", params=params)
-    if r.status_code > 200:
-        logger.debug(f"Couldn't call Pinboard: ({r.status_code}): {r.text}")
-        raise exceptions.PinboardError(r.status_code, r.text)
-
-    replace_cur = db.cursor()
-
-    for bookmark in r.json():
-        logger.debug(
-            f"Got annotation {bookmark['href']}, last updated {bookmark['time']}"
-        )
-
-        values = [
-            bookmark["hash"],
-            bookmark["href"],
-            bookmark["description"],
-            bookmark["extended"],
-            bookmark["meta"],
-            dateutil.parser.parse(bookmark["time"]),
-            bookmark["shared"] == "yes",
-            bookmark["toread"] == "yes",
-            json.dumps(bookmark["tags"].split()),
-        ]
-
-        query = f"REPLACE INTO pinb_posts VALUES ({','.join('?' * len(values))})"
-        replace_cur.execute(query, values)
-        logger.info(f"Added {bookmark['href']} from {bookmark['time']}.")
-        db.commit()
+        for bookmark in r.json():
+            logger.debug(
+                "Got bookmark %s, last updated %s", bookmark["href"], bookmark["time"]
+            )
+            new_pinboard = get_or_create_pinboard(
+                session,
+                bookmark["href"],
+                bookmark["description"],
+                isoparse(bookmark["time"]),
+            )
+            new_pinboard.hash = bookmark["hash"]
+            new_pinboard.title = bookmark["description"]
+            new_pinboard.description = bookmark["extended"]
+            new_pinboard.meta = bookmark["meta"]
+            new_pinboard.saved_timestamp = isoparse(bookmark["time"])
+            new_pinboard.toread = bookmark["toread"]
+            new_pinboard.tags = [
+                tag.replace("-", " ") for tag in bookmark["tags"].split(" ")
+            ]
+            if bookmark["shared"]:
+                new_pinboard.shared = VisibilityEnum.PUBLIC
+            else:
+                new_pinboard.shared = VisibilityEnum.PRIVATE
+            session.commit()
 
 
-"""
-CREATE TABLE pinb_posts (
-   hash TEXT PRIMARY KEY,
-   href TEXT,
-   description TEXT,
-   extended TEXT,
-   meta TEXT,
-   time TEXT,
-   shared INTEGER,
-   toread INTEGER,
-   tags TEXT,
-);
-"""
+# CREATE TABLE pinb_posts (
+#    hash TEXT PRIMARY KEY,
+#    href TEXT,
+#    description TEXT,
+#    extended TEXT,
+#    meta TEXT,
+#    time TEXT,
+#    shared INTEGER,
+#    toread INTEGER,
+#    tags TEXT,
+# );

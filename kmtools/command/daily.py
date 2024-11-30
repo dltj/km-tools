@@ -1,11 +1,18 @@
 """Actions that are performed daily."""
+
 import click
 
-from kmtools.action import obsidian_daily
+from kmtools.action.obsidian_daily_action import AddToObsidianDaily
 
 
 @click.command()
 @click.pass_obj
-def daily(details):
+def daily(_):
     """Perform the daily activities"""
-    obsidian_daily.daily(details)
+
+    actions = [
+        AddToObsidianDaily(),
+    ]
+
+    for action in actions:
+        action.run()

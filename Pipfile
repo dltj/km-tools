@@ -17,6 +17,7 @@ kmtools = {editable = true, path = "."}
 psutil = "*"
 click = "*"
 lxml = "*"
+sqlalchemy = "*"
 
 [dev-packages]
 jedi = "*"

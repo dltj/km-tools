@@ -1,9 +1,16 @@
 """_Wayback commands_"""
+
 import logging
+from typing import List
 
 import click
+from sqlalchemy import select
+from sqlalchemy.orm import Session
 
 from kmtools.action.wayback import wayback_action
+from kmtools.action.wayback_action import ResultsFromWaybackAction
+from kmtools.models import ProcessStatus, ProcessStatusEnum, WebResource
+from kmtools.util import database
 
 logger = logging.getLogger(__name__)
 
@@ -63,22 +70,58 @@ def update_job_command(job_id=None):
         click.echo(message)
 
 
+def _mark_completed(session: Session, resource: WebResource) -> None:
+    proc_status: ProcessStatus = (
+        session.execute(
+            select(ProcessStatus).where(
+                ProcessStatus.resource == resource,
+                ProcessStatus.action_name == ResultsFromWaybackAction.action_name,
+            )
+        )
+        .scalars()
+        .first()
+    )
+    proc_status.status = ProcessStatusEnum.COMPLETED
+    proc_status.retries = -2
+
+
 @wayback.command(name="hung")
 def hung_jobs():
     """List hung Wayback jobs"""
-    stalled_rows = wayback_action.find_stalled()
-    if stalled_rows:
-        fmt_str = "{:13.13s}  {:31.31s}  {:s}"
-        click.echo(fmt_str.format("Origin", "Saved", "URL"))
-        click.echo("Wayback URL\n")
-        for row in stalled_rows:
-            click.echo(
-                fmt_str.format(
-                    row.origin,
-                    row.timestamp.strftime("%Y-%m-%d %H:%M:%S"),
-                    row.url,
-                ),
+    with Session(database.engine) as session:
+        stmt = (
+            select(WebResource)
+            .join(ProcessStatus, WebResource.id == ProcessStatus.resource_id)
+            .where(
+                ProcessStatus.status == ProcessStatusEnum.RETRIES_EXCEEDED,
+                ProcessStatus.action_name == ResultsFromWaybackAction.action_name,
             )
-            click.echo(f"https://web.archive.org/web/2024*/{row.url}\n")
-    else:
-        click.echo(click.style("No hung jobs found.", fg="green"))
+        )
+        stalled_rows: List[WebResource] = session.execute(stmt).scalars().all()
+
+        if stalled_rows:
+            fmt_str = "{:10.10s} {:13.13s}  {:31.31s}  {:s}"
+            for row in stalled_rows:
+                click.echo(fmt_str.format("Resource", "Origin", "Saved", "URL"))
+                click.echo("Wayback URL\n")
+                click.echo(
+                    fmt_str.format(
+                        str(row.id),
+                        row.discriminator,
+                        row.saved_timestamp.strftime("%Y-%m-%d %H:%M:%S"),
+                        row.url,
+                    ),
+                )
+                click.echo(f"https://web.archive.org/web/2024*/{row.url}\n")
+                new_archive_url = click.prompt(
+                    "Enter replacement URL (or return to skip)", type=str
+                )
+                if new_archive_url:
+                    row.action_wayback.wayback_url = new_archive_url
+                    _mark_completed(session, row)
+                    session.commit()
+                else:
+                    if click.confirm("Artificially mark as complete?"):
+                        _mark_completed(session, row)
+        else:
+            click.echo(click.style("No hung jobs found.", fg="green"))

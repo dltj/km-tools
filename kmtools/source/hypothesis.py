@@ -1,179 +1,52 @@
-import datetime
-import json
 import logging
-import re
-import typing as ty
 
 import click
 import requests
-from bs4 import BeautifulSoup
+from dateutil.parser import isoparse
+from sqlalchemy import desc, select
+from sqlalchemy.orm import Session
 
 from kmtools import exceptions
-from kmtools.source import Annotation, Origin, WebResource
-from kmtools.util.config import config
+from kmtools.models import HypothesisAnnotation, VisibilityEnum
+from kmtools.util import database
 
 logger = logging.getLogger(__name__)
 
 
-class HypothesisPageOrigin(Origin):
-    origin_name = "HYPOTHESIS"
-    origin_table = "hyp_pages"
-    origin_key = "uri"
-
-    def __init__(self) -> None:
-        super().__init__()
-
-    def make_resource(self, uri: str) -> WebResource:
-        return HypothesisResource(uri=uri)
-
-
-hypothesis_page_origin = HypothesisPageOrigin()
-config.origins.append(hypothesis_page_origin)
-
-
-class HypothesisResource(WebResource):
-    origin = hypothesis_page_origin
-
-    docdrop_url_scan = re.compile(
-        r"""^https?://docdrop.org/video/(.*?)/?$          # YouTube video id (group 1)
-    """,
-        re.X,
-    )
-    dltjvid_url_scan = re.compile(
-        r"https?://media.dltj.org/annotated-video/[\dT]+-([0-9A-Za-z_-]{10}[048AEIMQUYcgkosw])-"
-    )
-
-    def __init__(self, uri: str) -> None:
-        db = config.kmtools_db
-        search_cur = db.cursor()
-        query = "SELECT * FROM hyp_pages WHERE uri=:uri"
-        search_cur.execute(query, [uri])
-        row = search_cur.fetchone()
-        if row:
-            super().__init__(
-                uri=uri,
-                title=row["title"],
-                description=None,
-                tags=None,
-                public=(row["public"] == "1"),
-            )
-            if search_cur.fetchone():
-                raise exceptions.MoreThanOneError(uri)
-        else:
-            raise exceptions.ResourceNotFoundError(uri)
-        if match := self.docdrop_url_scan.match(uri):
-            logger.debug(f"Found DocDrop match for {uri}; adjusting URLs.")
-            self.annotation_url = uri
-            self.normalized_url = f"https://youtube.com/watch?v={match.group(1)}"
-        elif match := self.dltjvid_url_scan.match(uri):
-            logger.debug(
-                f"Found DLTJ video annotation match for {uri}; adjusting URLs."
-            )
-            self.annotation_url = uri
-            self.normalized_url = f"https://youtube.com/watch?v={match.group(1)}"
-        elif uri.startswith("https://media.dltj.org/unchecked-transcript/"):
-            (
-                self.annotation_url,
-                self.normalized_url,
-                self.title,
-                self.publisher,
-            ) = self.transcript_urls(uri)
-        else:
-            self.annotation_url = f"https://via.hypothes.is/{uri}"
-            self.normalized_url = uri
-        logger.debug(
-            f"Normalized {uri}: {self.normalized_url}; Annotation for {uri}: {self.annotation_url}"
-        )
-
-    def transcript_urls(self, uri: str) -> ty.Tuple[str, str, str, str]:
-        page = requests.get(uri)
-        page.raise_for_status()
-        soup = BeautifulSoup(page.content, "html.parser")
-        episode_id = soup.find("a", id="episode")
-        podcast_id = soup.find("span", id="podcast")
-        annotation_url = uri
-        normalized_url = episode_id["href"]
-        title = episode_id.text
-        publisher = podcast_id.text
-        return annotation_url, normalized_url, title, publisher
+# def output_annotation(self, filepath):
+#     with (config.output_fd(filepath)) as output_fh:
+#         tags = _format_tags(self.tags)
+#         quote = self.quote.strip()
+#         annotation = self.annotation.strip()
+#         # headline = discussion = ""
+#         if annotation.startswith("##"):
+#             headline, _, discussion = annotation.partition("\n")
+#             headline = f"{headline}\n"
+#         else:
+#             headline = ""
+#             discussion = annotation.strip()
+#         if discussion:
+#             discussion = f"{discussion}\n\n"
+#         if tags:
+#             tags = f"- Tags:: {tags}\n"
+#         output_fh.write(
+#             f"{headline}"
+#             f"> {quote}\n\n"
+#             f"{discussion}"
+#             f"- Link to [Annotation]({self.link_incontext})\n{tags}\n"
+#         )
 
 
-class HypothesisAnnotationOrigin(Origin):
-    origin_name = "HYPOTHESIS"
-    origin_table = "hyp_posts"
-    origin_key = "link_html"
-
-    def __init__(self) -> None:
-        super().__init__()
-
-    def make_resource(self, uri: str) -> WebResource:
-        return HypothesisAnnotation(uri)
-
-
-hypothesis_annotation_origin = HypothesisAnnotationOrigin()
-
-
-class HypothesisAnnotation(Annotation):
-    origin = hypothesis_annotation_origin
-
-    def __init__(self, uri) -> None:
-        db = config.kmtools_db
-        search_cur = db.cursor()
-        query = "SELECT * FROM hyp_posts WHERE link_html=:uri"
-        search_cur.execute(query, [uri])
-        row = search_cur.fetchone()
-        if row:
-            super().__init__(
-                uri=row["link_html"],
-                source=HypothesisResource(row["uri"]),
-                title=row["document_title"],
-                quote=row["quote"],
-                annotation=row["annotation"],
-                tags=json.loads(row["tags"]),
-                public=(row["hidden"] == "0"),
-            )
-            if search_cur.fetchone():
-                raise exceptions.MoreThanOneError(uri)
-        else:
-            raise exceptions.ResourceNotFoundError(uri)
-        self.created_date = row["created"]
-        self.updated_date = row["updated"]
-        self.link_incontext = row["link_incontext"]
-
-    def output_annotation(self, filepath):
-        with (config.output_fd(filepath)) as output_fh:
-            tags = _format_tags(self.tags)
-            quote = self.quote.strip()
-            annotation = self.annotation.strip()
-            # headline = discussion = ""
-            if annotation.startswith("##"):
-                headline, _, discussion = annotation.partition("\n")
-                headline = f"{headline}\n"
-            else:
-                headline = ""
-                discussion = annotation.strip()
-            if discussion:
-                discussion = f"{discussion}\n\n"
-            if tags:
-                tags = f"- Tags:: {tags}\n"
-            output_fh.write(
-                f"{headline}"
-                f"> {quote}\n\n"
-                f"{discussion}"
-                f"- Link to [Annotation]({self.link_incontext})\n{tags}\n"
-            )
-
-
-def _format_tags(tag_list):
-    if tag_list:
-        # Dash to space
-        tag_list = map(lambda x: x.replace("-", " "), tag_list)
-        # Non hashtags to links
-        tag_list = map(lambda x: f"[[{x}]]" if x[0] != "#" else x, tag_list)
-        tags = ", ".join(tag_list)
-    else:
-        tags = None
-    return tags
+# def _format_tags(tag_list):
+#     if tag_list:
+#         # Dash to space
+#         tag_list = map(lambda x: x.replace("-", " "), tag_list)
+#         # Non hashtags to links
+#         tag_list = map(lambda x: f"[[{x}]]" if x[0] != "#" else x, tag_list)
+#         tags = ", ".join(tag_list)
+#     else:
+#         tags = None
+#     return tags
 
 
 @click.group()
@@ -200,30 +73,44 @@ def fetch(details):
         "user": details.settings.hypothesis.user,
     }
 
-    db = details.kmtools_db
+    with Session(database.engine) as session:
+        # Query the most recent Pinboard entry based on the 'time' column
+        stmt = (
+            select(HypothesisAnnotation)
+            .order_by(desc(HypothesisAnnotation.time_updated))
+            .limit(1)
+        )
 
-    since_cur = db.cursor()
-    since_date = since_cur.execute("SELECT max(updated) FROM hyp_posts;").fetchone()[0]
-    if since_date:
-        params["search_after"] = since_date
+        # Execute the query
+        most_recent_annotation = session.execute(stmt).scalars().first()
+        since_date = most_recent_annotation.time_updated
+        if since_date:
+            params["search_after"] = (
+                since_date.replace(microsecond=0, tzinfo=None).isoformat() + "Z"
+            )
 
-    logger.debug(f"Calling Hypothesis with {headers} (plus auth) and {params}")
-    headers["Authorization"] = f"Bearer {details.settings.hypothesis.api_token}"
+        logger.debug("Calling Hypothesis with %s (plus auth) and %s", headers, params)
+        headers["Authorization"] = f"Bearer {details.settings.hypothesis.api_token}"
 
-    r = requests.get("https://api.hypothes.is/api/search", params=params)
-    if r.status_code > 200:
-        logger.info(f"Couldn't call Hypothesis: ({r.status_code}): {r.text}")
-        raise exceptions.HypothesisError(r.status_code, r.text)
-
-    replace_cur = db.cursor()
+        r = requests.get(
+            "https://api.hypothes.is/api/search",
+            headers=headers,
+            params=params,
+            timeout=20,
+        )
+        if r.status_code > 200:
+            logger.info("Couldn't call Hypothesis: (%s): %s", r.status_code, r.text)
+            raise exceptions.HypothesisError(r.status_code, r.text)
 
     for annotation in r.json()["rows"]:
         logger.debug(
-            f"Got annotation {annotation['id']}, last updated {annotation['updated']}: {annotation=}"
+            "Got annotation %s, last updated %s",
+            annotation["id"],
+            annotation["updated"],
         )
         ## Skip comments on other's annotations
         if "references" in annotation:
-            logger.debug(f"Skipping...reference to {annotation['references']}")
+            logger.debug("Skipping...reference to %s", annotation["references"])
             continue
 
         if "selector" in annotation["target"][0]:
@@ -236,72 +123,55 @@ def fetch(details):
             title = annotation["document"]["title"][0]
         else:
             title = annotation["uri"].rsplit("/", 1)[-1].rsplit(".", 1)[0]
-        values = [
-            annotation["id"],
-            annotation["uri"],
-            annotation["text"],
-            annotation["created"],
-            annotation["updated"],
-            quote,
-            json.dumps(annotation["tags"]),
-            title,
-            annotation["links"]["html"],
-            annotation["links"]["incontext"],
-            int(annotation["hidden"] == True),  # noqa: E712, pylint: disable=C0121
-            int(annotation["flagged"] == True),  # noqa: E712, pylint: disable=C0121
-        ]
-        query = f"REPLACE INTO hyp_posts VALUES ({','.join('?' * len(values))})"
-        replace_cur.execute(query, values)
 
-        if "group:__world__" in annotation["permissions"]["read"]:
-            query = "SELECT * FROM hyp_pages WHERE uri=?"
-            values = [annotation["uri"]]
-            check = replace_cur.execute(query, values)
-            match = check.fetchone()
-            if not match or (match and match["public"] == 0):
-                values = [
-                    annotation["uri"],
-                    title,
-                    1,  ## Is public
-                    datetime.datetime.now().strftime("%Y-%m-%d %H:%M:%S%z"),
-                ]
-                query = f"REPLACE INTO hyp_pages VALUES ({','.join('?' * len(values))})"
-                replace_cur.execute(query, values)
-                logger.debug("Added to pages table.")
+        hypothesis_annotation, hypothesis_page = HypothesisAnnotation.create_with_page(
+            session, annotation["uri"], title, isoparse(annotation["created"])
+        )
+        hypothesis_annotation.id = annotation["id"]
+        hypothesis_annotation.annotation = annotation["id"]
+        hypothesis_annotation.time_updated = isoparse(annotation["updated"])
+        hypothesis_annotation.quote = quote
+        hypothesis_annotation.tags = annotation["tags"]
+        hypothesis_annotation.link_html = annotation["links"]["html"]
+        hypothesis_annotation.link_incontext = annotation["links"]["incontext"]
+        hypothesis_annotation.shared = (
+            VisibilityEnum.PRIVATE if annotation["hidden"] else VisibilityEnum.PUBLIC
+        )
+        hypothesis_annotation.flagged = int(annotation["flagged"] == True)
 
-        query = "REPLACE INTO hyp_posts_pages_map VALUES (?, ?)"
-        values = [annotation["id"], annotation["uri"]]
-        replace_cur.execute(query, values)
-        logger.info(f"Added {annotation['uri']} from {annotation['updated']}.")
-        db.commit()
+        hypothesis_page.shared = (
+            VisibilityEnum.PRIVATE if annotation["hidden"] else VisibilityEnum.PUBLIC
+        )
+
+        # TODO: Is this important?
+        # if "group:__world__" in annotation["permissions"]["read"]:
+        logger.info("Added %s from %s.", annotation["uri"], annotation["updated"])
 
 
-"""
-CREATE TABLE hyp_posts (
-	id TEXT PRIMARY KEY,
-	uri TEXT NOT NULL,
-	annotation TEXT,
-	created TEXT,
-	updated TEXT,
-	quote TEXT,
-	tags TEXT,
-	document_title TEXT,
-	link_html TEXT,
-	link_incontext INTEGER,
-	hidden INTEGER,
-	flagged INTEGER,
+# CREATE TABLE hyp_posts (
+# 	id TEXT PRIMARY KEY,
+# 	uri TEXT NOT NULL,
+# 	annotation TEXT,
+# 	created TEXT,
+# 	updated TEXT,
+# 	quote TEXT,
+# 	tags TEXT,
+# 	document_title TEXT,
+# 	link_html TEXT,
+# 	link_incontext INTEGER,
+# 	hidden INTEGER,
+# 	flagged INTEGER,
 
-CREATE TABLE hyp_pages (
-	uri TEXT PRIMARY KEY,
-	title TEXT,
-	public INTEGER DEFAULT 0,
-);
+# CREATE TABLE hyp_pages (
+# 	uri TEXT PRIMARY KEY,
+# 	title TEXT,
+# 	public INTEGER DEFAULT 0,
+# );
 
-CREATE TABLE hyp_posts_pages_map (
-	uri TEXT NOT NULL,
-	annotation_id TEXT NOT NULL,
-	FOREIGN KEY (uri) REFERENCES pages(uri),
-	FOREIGN KEY (annotation_id) REFERENCES posts(id),
-	PRIMARY KEY (uri, annotation_id)
-);
-"""
+# CREATE TABLE hyp_posts_pages_map (
+# 	uri TEXT NOT NULL,
+# 	annotation_id TEXT NOT NULL,
+# 	FOREIGN KEY (uri) REFERENCES pages(uri),
+# 	FOREIGN KEY (annotation_id) REFERENCES posts(id),
+# 	PRIMARY KEY (uri, annotation_id)
+# );

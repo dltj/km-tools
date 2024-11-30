@@ -158,3 +158,25 @@ class SummarizeError(KMException):
     def __init__(self, message):
         self.detail = message
         super().__init__(message)
+
+
+class ActionError(KMException):
+    """Exception raised for Actions.
+
+    Args:
+        KMException (_type_): _description_
+    """
+
+    def __init__(self, message):
+        self.detail = message
+        super().__init__(message)
+
+
+class ActionSkip(ActionError):
+    """Exception raised when a commit to the process_status table should be skipped."""
+
+    default_detail = "Skip process_table update"
+
+    def __init__(self, message):
+        self.detail = message
+        super().__init__(message)

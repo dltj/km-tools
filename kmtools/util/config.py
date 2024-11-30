@@ -8,6 +8,7 @@ import sqlite3
 import sys
 
 import click
+from omegaconf import OmegaConf
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +22,9 @@ class Config:  # pylint: disable=too-few-public-methods
         self.origins = list()
         self.actions = list()
         self.kmtools_db_conn = None
+
+        self.settings = OmegaConf.load("config.yml")
+        OmegaConf.set_readonly(self.settings, True)
 
     @property
     def kmtools_db(self):

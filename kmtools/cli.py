@@ -10,7 +10,6 @@ from logging.handlers import TimedRotatingFileHandler
 
 import click
 import psutil
-from omegaconf import OmegaConf
 
 from kmtools.action import mastodon
 from kmtools.command import daily, hourly, obsidian, robustify, summarize, wayback
@@ -52,7 +51,8 @@ def find_and_kill_old_instances(max_runtime: int = 600) -> None:
                         proc.wait(timeout=3)
 
         except (psutil.NoSuchProcess, psutil.AccessDenied, IndexError):
-            # Handle exceptions where the process may have already exited or a permission error occurred
+            # Handle exceptions where the process may have already exited
+            # or a permission error occurred
             pass
 
 
@@ -67,8 +67,6 @@ def find_and_kill_old_instances(max_runtime: int = 600) -> None:
 def cli(ctx, dry_run, debug, verbose, logfile):
     """Root command line function"""
     config.dry_run = dry_run
-    config.settings = OmegaConf.load("config.yml")
-    OmegaConf.set_readonly(config.settings, True)
 
     if sys.stdin and sys.stdin.isatty():
         if not logfile:

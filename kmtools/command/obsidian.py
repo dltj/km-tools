@@ -1,6 +1,6 @@
 import click
 
-from kmtools.action import obsidian_daily
+from kmtools.action.obsidian_daily_action import AddToObsidianDaily
 
 
 @click.group()
@@ -10,6 +10,6 @@ def obsidian():
 
 @obsidian.command(name="daily")
 @click.pass_obj
-def daily_command(details):
+def daily_command(_):
     """Make daily Obsidian diary page"""
-    return obsidian_daily.daily(details)
+    return AddToObsidianDaily().run()
