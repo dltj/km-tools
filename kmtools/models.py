@@ -207,6 +207,8 @@ class Pinboard(WebResource):
 class HypothesisPage(WebResource):
     __tablename__ = "hypothesis_pages"
     __mapper_args__ = {"polymorphic_identity": "hypothesis"}
+    _normalized_url: ClassVar[str] = None
+    _annotation_url: ClassVar[str] = None
 
     id: Mapped[int] = mapped_column(ForeignKey("webresource.id"), primary_key=True)
     _shared: Mapped[Optional[VisibilityEnum]] = mapped_column(
@@ -240,29 +242,40 @@ class HypothesisPage(WebResource):
         else:
             self._shared = shared
 
-    @property
-    def _normalized_url(self):
+    def _url_normalization(self):
         if match := docdrop_url_scan.match(self.href):
             logger.debug("Found DocDrop match for %s; adjusting URLs.", self.href)
-            self.annotation_url = self.href
-            self.normalized_url = f"https://youtube.com/watch?v={match.group(1)}"
+            self._annotation_url = self.href
+            self._normalized_url = f"https://youtube.com/watch?v={match.group(1)}"
         elif match := dltjvid_url_scan.match(self.href):
             logger.debug(
                 "Found DLTJ video annotation match for %s; adjusting URLs.",
                 self.href,
             )
-            self.annotation_url = self.href
-            self.normalized_url = f"https://youtube.com/watch?v={match.group(1)}"
+            self._annotation_url = self.href
+            self._normalized_url = f"https://youtube.com/watch?v={match.group(1)}"
         elif self.href.startswith("https://media.dltj.org/unchecked-transcript/"):
             (
-                self.annotation_url,
-                self.normalized_url,
+                self._annotation_url,
+                self._normalized_url,
                 self.title,
                 self.publisher,
             ) = self.transcript_urls()
         else:
-            self.annotation_url = f"https://via.hypothes.is/{self.href}"
-            self.normalized_url = self.href
+            self._annotation_url = f"https://via.hypothes.is/{self.href}"
+            self._normalized_url = self.href
+
+    @property
+    def normalized_url(self):
+        if not self._normalized_url:
+            self._url_normalization()
+        return self._normalized_url
+
+    @property
+    def annotation_url(self):
+        if not self._annotation_url:
+            self._url_normalization()
+        return self._annotation_url
 
     def transcript_urls(self) -> Tuple[str, str, str, str]:
         page = requests.get(self.href, timeout=10)

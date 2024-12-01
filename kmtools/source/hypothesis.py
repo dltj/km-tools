@@ -81,12 +81,13 @@ def fetch(details):
             .limit(1)
         )
 
-        # Execute the query
+        # Execute the query. We're using `microseconds=999999` as a
+        # kluge to get past the most recent annotaion in the database.
         most_recent_annotation = session.execute(stmt).scalars().first()
         since_date = most_recent_annotation.time_updated
         if since_date:
             params["search_after"] = (
-                since_date.replace(microsecond=0, tzinfo=None).isoformat() + "Z"
+                since_date.replace(microsecond=999999, tzinfo=None).isoformat() + "Z"
             )
 
         logger.debug("Calling Hypothesis with %s (plus auth) and %s", headers, params)
@@ -124,27 +125,35 @@ def fetch(details):
         else:
             title = annotation["uri"].rsplit("/", 1)[-1].rsplit(".", 1)[0]
 
-        hypothesis_annotation, hypothesis_page = HypothesisAnnotation.create_with_page(
-            session, annotation["uri"], title, isoparse(annotation["created"])
-        )
-        hypothesis_annotation.id = annotation["id"]
-        hypothesis_annotation.annotation = annotation["id"]
-        hypothesis_annotation.time_updated = isoparse(annotation["updated"])
-        hypothesis_annotation.quote = quote
-        hypothesis_annotation.tags = annotation["tags"]
-        hypothesis_annotation.link_html = annotation["links"]["html"]
-        hypothesis_annotation.link_incontext = annotation["links"]["incontext"]
-        hypothesis_annotation.shared = (
-            VisibilityEnum.PRIVATE if annotation["hidden"] else VisibilityEnum.PUBLIC
-        )
-        hypothesis_annotation.flagged = int(annotation["flagged"] == True)
+        with session.no_autoflush:
+            hypothesis_annotation, hypothesis_page = (
+                HypothesisAnnotation.create_with_page(
+                    session, annotation["uri"], title, isoparse(annotation["created"])
+                )
+            )
+            hypothesis_annotation.hyp_id = annotation["id"]
+            hypothesis_annotation.annotation = annotation["text"]
+            hypothesis_annotation.time_updated = isoparse(annotation["updated"])
+            hypothesis_annotation.quote = quote
+            hypothesis_annotation.tags = annotation["tags"]
+            hypothesis_annotation.link_html = annotation["links"]["html"]
+            hypothesis_annotation.link_incontext = annotation["links"]["incontext"]
+            hypothesis_annotation.shared = (
+                VisibilityEnum.PRIVATE
+                if annotation["hidden"]
+                else VisibilityEnum.PUBLIC
+            )
+            hypothesis_annotation.flagged = int(annotation["flagged"] == True)
 
-        hypothesis_page.shared = (
-            VisibilityEnum.PRIVATE if annotation["hidden"] else VisibilityEnum.PUBLIC
-        )
+            hypothesis_page.shared = (
+                VisibilityEnum.PRIVATE
+                if annotation["hidden"]
+                else VisibilityEnum.PUBLIC
+            )
 
         # TODO: Is this important?
         # if "group:__world__" in annotation["permissions"]["read"]:
+        session.commit()
         logger.info("Added %s from %s.", annotation["uri"], annotation["updated"])
 
 

@@ -7,7 +7,7 @@ from kmtools.action.mastodon_action import PostToMastodonAction
 from kmtools.action.obsidian_hourly_action import SaveToObsidian
 from kmtools.action.summarize_action import SummarizeAction
 from kmtools.action.wayback_action import ResultsFromWaybackAction, SaveToWaybackAction
-from kmtools.source import pinboard
+from kmtools.source import hypothesis, pinboard
 
 
 @click.command()
@@ -16,7 +16,7 @@ def hourly(details):
     """Perform the hourly gathering from origins and action activations"""
 
     pinboard.fetch(details)
-    # hypothesis.fetch(details)
+    hypothesis.fetch(details)
 
     actions = [
         ResultsFromWaybackAction(),

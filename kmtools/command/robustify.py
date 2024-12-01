@@ -1,11 +1,11 @@
 """Output links that have been robustified."""
+
 import logging
 from string import Template
 
 import click
-from dateutil import parser
 
-from kmtools.action.wayback import wayback_action
+from kmtools.action.wayback_action import wayback_action
 from kmtools.exceptions import MoreThanOneError, ResourceNotFoundError
 
 logger = logging.getLogger(__name__)

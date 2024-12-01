@@ -35,8 +35,7 @@ class PostToMastodonAction(ActionBase):
 
         annotation_addition = ""
         if hasattr(resource, "annotations"):
-            annotation_url = resource.via_url
-            annotation_addition = f" \U0001F5D2 annotated {annotation_url}"
+            annotation_addition = f" \U0001f5d2 annotated {resource.annotation_url}"
 
         url_length = len(resource.normalized_url)
         annotation_length = len(annotation_addition)
