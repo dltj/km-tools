@@ -2,9 +2,7 @@
 
 import click
 
-from kmtools.action import summarize
-from kmtools.action.kagi import kagi_action
-from kmtools.source import WebResource
+from kmtools.action import kagi_action, summarize_action
 
 
 @click.command(name="summarize")
@@ -21,10 +19,9 @@ def summarize_command(_, url=None, quiet=False, kagi=False) -> None:
     :param url: URL to summarize
     """
     if url:
-        source = WebResource(url)
-        derived_date, summarization = summarize.summarize(source)
+        derived_date, summarization = summarize_action.get_summary(url)
         if kagi:
-            summarization = kagi_action.retrieve_summary(url)
+            summarization = kagi_action.get_summary(url)
         if not quiet:
             click.echo(
                 f"The webpage at {url} was published on {derived_date}. It can be summarized as follows\n"
