@@ -1,4 +1,5 @@
 import re
+from datetime import datetime, timedelta
 
 import yaml
 
@@ -51,6 +52,37 @@ class ObsidianDailyPage(ObsidianPageBase):
         self.readings = [
             line.lstrip("- ").strip() for line in lines if line.startswith("- ")
         ]
+
+        # Set/fix dates in content_before
+        weekday_name = datetime.now().strftime("%A")
+        date_14_days_ago = (datetime.now() - timedelta(days=14)).strftime("%Y-%m-%d")
+        date_7_days_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
+        date_yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
+        date_tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
+        date_today = datetime.now().strftime("%d-%b")
+
+        output_lines = []
+        for line in self.content_before.splitlines():
+            if line.startswith("Weekday::"):
+                output_lines.append(f"Weekday:: {weekday_name}")
+                continue
+            if line.startswith("Two weeks ago::"):
+                output_lines.append(f"Two weeks ago:: [[{date_14_days_ago}]]")
+                continue
+            if line.startswith("Last week::"):
+                output_lines.append(f"Last week:: [[{date_7_days_ago}]]")
+                continue
+            if line.startswith("Yesterday::"):
+                output_lines.append(f"Yesterday:: [[{date_yesterday}]]")
+                continue
+            if line.startswith("Tomorrow::"):
+                output_lines.append(f"Tomorrow:: [[{date_tomorrow}]]")
+                continue
+            if line.startswith("LIST FROM #"):
+                output_lines.append(f"LIST FROM #{date_today}")
+                continue
+            output_lines.append(line)
+        self.content_before = "\n".join(output_lines)
 
     def save(self):
         self.readings_content = "\n".join(f"- {item}" for item in self.readings)
