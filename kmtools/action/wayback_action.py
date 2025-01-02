@@ -4,11 +4,12 @@ from typing import Tuple
 
 import requests
 from sqlalchemy import select
-from sqlalchemy.orm import Session
+from sqlalchemy.orm import Session, joinedload
 
 from kmtools.action.action_base import ActionBase
 from kmtools.exceptions import ActionError, ActionSkip
 from kmtools.models import ActionWayback, WebResource
+from kmtools.util import database
 from kmtools.util.config import config
 
 logger = logging.getLogger(__name__)
@@ -242,6 +243,21 @@ class ResultsFromWaybackAction(ActionBase):
         wayback_action.wayback_details = json.dumps(wayback_details)
         # Note: Not committing the session here because the process_status object nees a status
         return
+
+
+def find_entry(url: str) -> WebResource:
+    with Session(database.engine, autoflush=False) as session:
+        resource: WebResource = (
+            session.scalars(
+                select(WebResource)
+                .where(WebResource.href == url)
+                .options(joinedload("*"))
+            )
+            .unique()
+            .one()
+        )
+
+        return resource
 
 
 def main():

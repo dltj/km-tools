@@ -11,7 +11,7 @@ from logging.handlers import TimedRotatingFileHandler
 import click
 import psutil
 
-from kmtools.command import daily, hourly, obsidian, summarize, wayback
+from kmtools.command import daily, hourly, obsidian, robustify, summarize, wayback
 from kmtools.source import hypothesis, pinboard
 from kmtools.util.config import config
 from kmtools.util.logging_util import PackagePathFilter
@@ -115,7 +115,7 @@ cli.add_command(obsidian.obsidian)
 # cli.add_command(mastodon.mastodon)
 cli.add_command(hourly.hourly)
 cli.add_command(daily.daily)
-# cli.add_command(robustify.robustify)
+cli.add_command(robustify.robustify)
 cli.add_command(summarize.summarize_command)
 
 # pylint: disable=no-value-for-parameter

@@ -5,8 +5,9 @@ from string import Template
 
 import click
 
-from kmtools.action.wayback_action import wayback_action
+from kmtools.action import wayback_action
 from kmtools.exceptions import MoreThanOneError, ResourceNotFoundError
+from kmtools.models import WebResource
 
 logger = logging.getLogger(__name__)
 
@@ -38,7 +39,7 @@ def robustify(details, style, url):
     logger.debug(f"Searching for {url}")
 
     try:
-        webpage = wayback_action.find_entry(url)
+        webpage: WebResource = wayback_action.find_entry(url)
     except MoreThanOneError:
         logger.error(f"More than one wayback entry found for {url}. Exiting.")
         return
@@ -46,7 +47,7 @@ def robustify(details, style, url):
         logger.error(f"{url} not found in wayback database. Exiting.")
         return
 
-    archive_date = webpage.timestamp.isoformat()
+    # archive_date = webpage.saved_timestamp.isoformat()
 
     if style == "html":
         robust_template = Template(
@@ -56,27 +57,25 @@ def robustify(details, style, url):
     elif style == "tt":
         robust_template = Template(
             """
-{% include thursday-threads-quote.html
-blockquote=''
-href="$href"
-versionurl="$archive_url"
-versiondate="$archive_date"
-anchor="$title"
-post=''
-%}"""
+{{ thursday_threads_quote(href="$href",
+ blockquote='',
+ versiondate="$archive_date",
+ versionurl="$archive_url",
+ anchor="$title",
+ post="") }}
+"""
         )
     else:
         robust_template = Template(
-            '{% include robustlink.html href="$href" versionurl="$archive_url" '
-            'versiondate="$archive_date" title="$title" anchor="REPLACE_ME" %}',
+            '{{ robustlink(href="$href", versionurl="$archive_url", versiondate="$archive_date", title="$title", anchor="") }}'
         )
 
     robust_string = robust_template.substitute(
         {
-            "href": webpage.url,
-            "archive_url": webpage.wayback_url,
-            "archive_date": archive_date,
-            "title": "TITLE-PLACEHOLDER",
+            "href": webpage.href,
+            "archive_url": webpage.action_wayback.wayback_url,
+            "archive_date": webpage.action_wayback.processed_at,
+            "title": webpage.headline,
         }
     )
 
