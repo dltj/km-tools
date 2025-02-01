@@ -8,7 +8,7 @@ from kmtools.obsidian.page_base import ObsidianPageBase
 
 class ObsidianDailyPage(ObsidianPageBase):
     SECTION_START_MARKDOWN = r"^## Yesterday\'s readings\s*$"
-    SECTION_END_BLANK_LINE = r"\n\s*\n"
+    SECTION_END_DAILY_NOTES = r"^## Daily notes\s$"
 
     def __init__(self, file_name: str) -> None:
         self.readings_content = ""
@@ -22,7 +22,7 @@ class ObsidianDailyPage(ObsidianPageBase):
 
         # Use regex to find the section start and end based on a blank line
         section_start_regex = re.compile(self.SECTION_START_MARKDOWN, re.MULTILINE)
-        section_end_regex = re.compile(self.SECTION_END_BLANK_LINE, re.MULTILINE)
+        section_end_regex = re.compile(self.SECTION_END_DAILY_NOTES, re.MULTILINE)
 
         # Find the section
         start_match = section_start_regex.search(self.content)
@@ -90,6 +90,6 @@ class ObsidianDailyPage(ObsidianPageBase):
             frontmatter_text = yaml.safe_dump(self.frontmatter, sort_keys=False)
             full_content = f"---\n{frontmatter_text}---"
             full_content += self.content_before
-            full_content += f"## Yesterday's readings\n{self.readings_content}\n\n"
-            full_content += self.content_after.strip()
+            full_content += f"\n## Yesterday's readings\n{self.readings_content}\n\n"
+            full_content += f"## Daily notes\n{self.content_after.strip()}"
             f.write(full_content)
