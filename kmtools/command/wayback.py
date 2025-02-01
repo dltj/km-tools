@@ -69,19 +69,19 @@ def wayback():
 #         click.echo(message)
 
 
-# def _mark_completed(session: Session, resource: WebResource) -> None:
-#     proc_status: ProcessStatus = (
-#         session.execute(
-#             select(ProcessStatus).where(
-#                 ProcessStatus.resource == resource,
-#                 ProcessStatus.action_name == ResultsFromWaybackAction.action_name,
-#             )
-#         )
-#         .scalars()
-#         .first()
-#     )
-#     proc_status.status = ProcessStatusEnum.COMPLETED
-#     proc_status.retries = -2
+def _mark_completed(session: Session, resource: WebResource) -> None:
+    proc_status: ProcessStatus = (
+        session.execute(
+            select(ProcessStatus).where(
+                ProcessStatus.resource == resource,
+                ProcessStatus.action_name == ResultsFromWaybackAction.action_name,
+            )
+        )
+        .scalars()
+        .first()
+    )
+    proc_status.status = ProcessStatusEnum.COMPLETED
+    proc_status.retries = -2
 
 
 @wayback.command(name="hung")
@@ -111,7 +111,7 @@ def hung_jobs():
                         row.url,
                     ),
                 )
-                click.echo(f"https://web.archive.org/web/2024*/{row.url}\n")
+                click.echo(f"https://web.archive.org/web/2025*/{row.url}\n")
                 new_archive_url = click.prompt(
                     "Enter replacement URL (or return to skip)", type=str
                 )
