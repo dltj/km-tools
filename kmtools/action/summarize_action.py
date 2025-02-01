@@ -156,14 +156,14 @@ def main():
     #     session.add(pinb)
     #     session.commit()
 
-    actions = [
-        SummarizeAction(),
-        # SaveToWaybackAction(),
-        # PostToMastodonAction(),
-    ]
+    # actions = [
+    #     SummarizeAction(),
+    #     # SaveToWaybackAction(),
+    #     # PostToMastodonAction(),
+    # ]
 
-    for action in actions:
-        action.run()
+    # for action in actions:
+    #     action.run()
 
 
 if __name__ == "__main__":

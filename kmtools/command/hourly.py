@@ -4,6 +4,7 @@ import click
 
 from kmtools.action.kagi_action import SummarizeWithKagiAction
 from kmtools.action.mastodon_action import PostToMastodonAction
+from kmtools.action.obsidian_annotate_action import AnnotateObsidianPage
 from kmtools.action.obsidian_hourly_action import SaveToObsidian
 from kmtools.action.summarize_action import SummarizeAction
 from kmtools.action.wayback_action import ResultsFromWaybackAction, SaveToWaybackAction
@@ -25,6 +26,7 @@ def hourly(details):
         SummarizeAction(),
         PostToMastodonAction(),
         SaveToObsidian(),
+        AnnotateObsidianPage(),
     ]
 
     for action in actions:

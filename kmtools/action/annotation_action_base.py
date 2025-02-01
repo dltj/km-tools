@@ -1,4 +1,4 @@
-"""Abstract base class for all Actions"""
+"""Abstract base class for all ANNOTATION Actions"""
 
 import logging
 from typing import List, Optional
@@ -7,83 +7,89 @@ from sqlalchemy import func, or_, select
 from sqlalchemy.orm import Session, joinedload
 
 from kmtools.exceptions import ActionError, ActionSkip
-from kmtools.models import ProcessStatus, ProcessStatusEnum, WebResource
+from kmtools.models import AnnotationStatus, HypothesisAnnotation, ProcessStatusEnum
 from kmtools.util import database
 
 logger = logging.getLogger(__name__)
 
 
-class ActionBase:
-    """Abstract Base Class for all Actions"""
+class AnnotationActionBase:
+    """Abstract Base Class for all ANNOTATION Actions"""
 
     action_name: str  # Each subclass should define this
 
     def __init__(self, retry_limit: int = 5) -> None:
         self.retry_limit: int = retry_limit
 
-    def get_unprocessed_resources(self, session: Session) -> List[WebResource]:
+    def get_unprocessed_annotations(
+        self, session: Session
+    ) -> List[HypothesisAnnotation]:
         """For this action, retrieve resources with either no entry in ProcessStatus or with retries < retry limit."""
         # Start with a subquery where retries have been exceeded or process completed.
         # We will negate this in the subsequent query to get webresources where a
         # process has not started.
         subquery = (
-            select(ProcessStatus.resource_id)
-            .where(ProcessStatus.action_name == self.action_name)
+            select(AnnotationStatus.annotation_id)
+            .where(AnnotationStatus.action_name == self.action_name)
             .where(
                 or_(
-                    ProcessStatus.status == ProcessStatusEnum.RETRIES_EXCEEDED,
-                    ProcessStatus.status == ProcessStatusEnum.COMPLETED,
+                    AnnotationStatus.status == ProcessStatusEnum.RETRIES_EXCEEDED,
+                    AnnotationStatus.status == ProcessStatusEnum.COMPLETED,
                 )
             )
         )
 
-        resources: List[WebResource] = session.scalars(
-            select(WebResource)
-            .where(~WebResource.id.in_(subquery))
+        resources: List[HypothesisAnnotation] = session.scalars(
+            select(HypothesisAnnotation)
+            .where(~HypothesisAnnotation.id.in_(subquery))
             .options(joinedload("*"))
         ).unique()
 
         return resources
 
     def run(self) -> None:
-        """Process all unprocessed WebResources."""
+        """Process all unprocessed HypothesisAnnotation records."""
 
         with Session(database.engine, autoflush=False) as session:
             logging.debug(
-                "Looking for unprocessed resources for %s", self.__class__.__name__
+                "Looking for unprocessed annotations for %s", self.__class__.__name__
             )
-            resources = self.get_unprocessed_resources(session)
+            annotations = self.get_unprocessed_annotations(session)
 
-            for resource in resources:
+            for annotation in annotations:
                 logging.info(
                     "(%s) Processing resource: %s",
                     self.__class__.__name__,
-                    resource.href,
+                    annotation.hyp_id,
                 )
 
                 # Get a process_status record, if one exists.
-                process_status: Optional[ProcessStatus] = (
-                    session.query(ProcessStatus)
-                    .filter_by(resource_id=resource.id, action_name=self.action_name)
+                annotation_status: Optional[AnnotationStatus] = (
+                    session.query(AnnotationStatus)
+                    .filter_by(
+                        annotation_id=annotation.id, action_name=self.action_name
+                    )
                     .first()
                 )
 
                 # If we've exceeded the retry limit for this resource, update the
                 # process_status record and continue.
-                if process_status and process_status.retries > self.retry_limit:
-                    process_status.status = ProcessStatusEnum.RETRIES_EXCEEDED
-                    process_status.processed_at = func.now()
+                if annotation_status and annotation_status.retries > self.retry_limit:
+                    annotation_status.status = ProcessStatusEnum.RETRIES_EXCEEDED
+                    annotation_status.processed_at = func.now()
                     session.commit()
                     logging.warning(
-                        "Retries exceeded at %s for %s", self.retry_limit, resource.url
+                        "Retries exceeded at %s for %s",
+                        self.retry_limit,
+                        annotation.hyp_id,
                     )
                     continue
 
                 # When this is the first time we've tried to process a resource, create
                 # a process_status record.
-                if not process_status:
-                    process_status = ProcessStatus(
-                        resource_id=resource.id,
+                if not annotation_status:
+                    process_status = AnnotationStatus(
+                        annotation_id=annotation.id,
                         action_name=self.action_name,
                         retries=0,
                     )
@@ -91,9 +97,9 @@ class ActionBase:
 
                 # Process the resource.
                 try:
-                    self.process(session, resource)
+                    self.process(session, annotation)
                     process_status.status = ProcessStatusEnum.COMPLETED
-                    logging.debug("Successful processed: %s", resource.href)
+                    logging.debug("Successful processed: %s", annotation.hyp_id)
                 except ActionSkip as e:
                     logging.debug("Skipping process_table commit: %s", e)
                     session.rollback()
@@ -103,7 +109,7 @@ class ActionBase:
                     process_status.status = ProcessStatusEnum.RETRYABLE
                     logging.warning(
                         "Process failed for %s. Retrying (%s/%s). Failed because: %s",
-                        resource.href,
+                        annotation.hyp_id,
                         process_status.retries,
                         self.retry_limit,
                         e.detail,
@@ -114,10 +120,10 @@ class ActionBase:
                 logging.debug(
                     "(%s) Done processing resource: %s",
                     self.__class__.__name__,
-                    resource.href,
+                    annotation.hyp_id,
                 )
 
-    def process(self, session: Session, resource: WebResource) -> str:
+    def process(self, session: Session, annotation: HypothesisAnnotation) -> str:
         """To be implemented in subclass. Define the processing logic."""
         raise NotImplementedError
 

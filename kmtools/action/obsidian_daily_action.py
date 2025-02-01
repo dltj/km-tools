@@ -27,9 +27,6 @@ class AddToObsidianDaily(ActionBase):
             - ActionException: when the attempt to post to Obsidian results in an error
         """
 
-        if resource.__class__.__name__ == "HypothesisPage":
-            return
-
         date_filename = date.today().strftime("%Y-%m-%d") + ".md"
         obsidian_daily_page = ObsidianDailyPage(file_name=date_filename)
         obsidian_daily_page.readings.append(

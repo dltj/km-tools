@@ -8,8 +8,9 @@ from typing import ClassVar, List, Optional, Tuple
 
 import requests
 from bs4 import BeautifulSoup
-from sqlalchemy import Column, DateTime, ForeignKey, Integer, String, func, select
+from sqlalchemy import Column, DateTime
 from sqlalchemy import Enum as SqlEnum
+from sqlalchemy import ForeignKey, Integer, String, func, select
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
@@ -300,7 +301,6 @@ class HypothesisAnnotation(Base):
     time_created: Mapped[DateTime] = Column(DateTime(timezone=True))
     time_updated: Mapped[DateTime] = Column(DateTime(timezone=True))
     quote: Mapped[str] = mapped_column(String)
-    tags: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     document_title: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     link_html: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     link_incontext: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -311,12 +311,22 @@ class HypothesisAnnotation(Base):
     # Establish relationship back to HypothesisPage
     page = relationship("HypothesisPage", back_populates="annotations")
 
-    # Create native Python lists for stored JSON tag array structure
+    @declared_attr
+    def annotation_status(cls) -> Mapped[List["AnnotationStatus"]]:
+        return relationship("AnnotationStatus", back_populates="annotation")
+
+    @declared_attr
+    def action_obsidian_annotation(cls) -> Mapped["ActionObsidianAnnotation"]:
+        return relationship(
+            "ActionObsidianAnnotation", back_populates="annotation", uselist=False
+        )
+
+    # Create native Python lists for stored JSON tag array structures
     @property
     def tags(self) -> Optional[List[str]]:
         """Parse the JSON string of tags and return a list of strings."""
         try:
-            loaded_data = json.loads(self.tags) if self.tags else None
+            loaded_data = json.loads(self._tags) if self._tags else None
             if isinstance(loaded_data, list) and all(
                 isinstance(item, str) for item in loaded_data
             ):
@@ -417,6 +427,29 @@ class HypothesisAnnotation(Base):
                 raise TypeError("Data must be a list of strings.")
         else:
             self.tags = None
+
+
+class AnnotationStatus(Base):
+    __tablename__ = "annotation_status"
+
+    id: Mapped[int] = mapped_column(primary_key=True)
+    annotation_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("hypothesis_annotation.id")
+    )
+    action_name: Mapped[str]
+    status: Mapped[ProcessStatusEnum] = mapped_column(
+        SqlEnum(ProcessStatusEnum), nullable=False
+    )
+    processed_at = mapped_column(
+        DateTime(),
+        default=func.now(),
+        nullable=False,
+    )
+    retries = Column(Integer, default=0, nullable=False)
+
+    annotation: Mapped[HypothesisAnnotation] = relationship(
+        "HypothesisAnnotation", back_populates="annotation_status"
+    )
 
 
 class ProcessStatus(Base):
@@ -533,4 +566,19 @@ class ActionObsidianDaily(Base):
     daily_filename: Mapped[str] = mapped_column(String)
     resource: Mapped[WebResource] = relationship(
         "WebResource", back_populates="action_obsidian_daily", uselist=False
+    )
+
+
+class ActionObsidianAnnotation(Base):
+    __tablename__ = "action_obsidian_annotation"
+    id: Mapped[int] = mapped_column(primary_key=True)
+    annotation_id: Mapped[int] = mapped_column(
+        Integer, ForeignKey("hypothesis_annotation.id")
+    )
+    processed_at = mapped_column(DateTime(), default=func.now(), nullable=False)
+    filename: Mapped[str] = mapped_column(String)
+    annotation: Mapped[HypothesisAnnotation] = relationship(
+        "HypothesisAnnotation",
+        back_populates="action_obsidian_annotation",
+        uselist=False,
     )

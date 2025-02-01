@@ -28,9 +28,6 @@ class SaveToObsidian(ActionBase):
             - ActionException: when the attempt to post to Obsidian results in an error
         """
 
-        if resource.__class__.__name__ == "HypothesisPage":
-            return
-
         obsidian_hourly_action: ActionObsidianHourly = ActionObsidianHourly(
             resource=resource
         )
@@ -54,9 +51,11 @@ class SaveToObsidian(ActionBase):
             obsidian_source_page.content += (
                 f"Automated summary:: {resource.action_summary.summary}\n\n"
             )
-        obsidian_source_page.content += "Tags:: " + ", ".join(
-            [f"[[{tag}]]" for tag in resource.tags]
-        )
+        if hasattr(resource, "tags"):
+            obsidian_source_page.content += "Tags:: " + ", ".join(
+                [f"[[{tag}]]" for tag in resource.tags]
+            )
+
         obsidian_source_page.save()
         obsidian_hourly_action.filename = obsidian_source_page.filepath.as_posix()
         session.add(obsidian_hourly_action)
