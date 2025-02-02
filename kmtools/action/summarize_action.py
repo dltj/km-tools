@@ -147,24 +147,24 @@ class SummarizeAction(ActionBase):
         return
 
 
-def main():
-    # database.Base.metadata.create_all(database.engine)
-    # with Session(database.engine) as session:
-    #     pinb: Pinboard = Pinboard(
-    #         hash="hashblah", href="hrefbalh", time="tieblah", shared=1, toread=1
-    #     )
-    #     session.add(pinb)
-    #     session.commit()
+# def main():
+# database.Base.metadata.create_all(database.engine)
+# with Session(database.engine) as session:
+#     pinb: Pinboard = Pinboard(
+#         hash="hashblah", href="hrefbalh", time="tieblah", shared=1, toread=1
+#     )
+#     session.add(pinb)
+#     session.commit()
 
-    # actions = [
-    #     SummarizeAction(),
-    #     # SaveToWaybackAction(),
-    #     # PostToMastodonAction(),
-    # ]
+# actions = [
+#     SummarizeAction(),
+#     # SaveToWaybackAction(),
+#     # PostToMastodonAction(),
+# ]
 
-    # for action in actions:
-    #     action.run()
+# for action in actions:
+#     action.run()
 
 
-if __name__ == "__main__":
-    main()
+# if __name__ == "__main__":
+#     main()
