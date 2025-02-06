@@ -52,7 +52,7 @@ def robustify(details, style, url):
     if style == "html":
         robust_template = Template(
             '<a href="$href" data-versionurl="$archive_url" '
-            'data-versiondate="$archive_date" title="$title">REPLACE_ME</a>'
+            'data-versiondate="$archive_date" title="$title | $publisher">REPLACE_ME</a>'
         )
     elif style == "tt":
         robust_template = Template(
@@ -62,12 +62,12 @@ def robustify(details, style, url):
  versiondate="$archive_date",
  versionurl="$archive_url",
  anchor="$title",
- post="") }}
+ post=", $publisher") }}
 """
         )
     else:
         robust_template = Template(
-            '{{ robustlink(href="$href", versionurl="$archive_url", versiondate="$archive_date", title="$title", anchor="") }}'
+            '{{ robustlink(href="$href", versionurl="$archive_url", versiondate="$archive_date", title="$title | $publisher", anchor="") }}'
         )
 
     robust_string = robust_template.substitute(
@@ -76,6 +76,7 @@ def robustify(details, style, url):
             "archive_url": webpage.action_wayback.wayback_url,
             "archive_date": webpage.action_wayback.processed_at,
             "title": webpage.headline,
+            "publisher": webpage.publisher,
         }
     )
 
