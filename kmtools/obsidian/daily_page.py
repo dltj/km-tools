@@ -8,7 +8,7 @@ from kmtools.obsidian.page_base import ObsidianPageBase
 
 class ObsidianDailyPage(ObsidianPageBase):
     SECTION_START_MARKDOWN = r"^## Yesterday\'s readings\s*$"
-    SECTION_END_DAILY_NOTES = r"^## Daily notes\s$"
+    SECTION_END_DAILY_NOTES = r"^## Daily notes"
 
     def __init__(self, file_name: str) -> None:
         self.readings_content = ""
