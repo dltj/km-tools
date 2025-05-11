@@ -1,7 +1,7 @@
 """
 Hold the configuration for the application.
 """
-
+from pathlib import Path
 import logging
 import os
 import sqlite3
@@ -23,7 +23,9 @@ class Config:  # pylint: disable=too-few-public-methods
         self.actions = list()
         self.kmtools_db_conn = None
 
-        self.settings = OmegaConf.load("config.yml")
+        pkg_dir = Path(__file__).resolve().parent.parent
+        config_path = pkg_dir / "../config.yml"
+        self.settings = OmegaConf.load(config_path)
         OmegaConf.set_readonly(self.settings, True)
 
     @property

@@ -1,25 +1,58 @@
 [build-system]
-requires = ["setuptools", "wheel"]
-build-backend = "setuptools.build_meta:__legacy__"
+requires = ["setuptools>=61.0", "wheel"]
+build-backend = "setuptools.build_meta"
 
 [project]
 name = "kmtools"
 version = "2.0.0"
 description = "Personal Knowledge Management tools"
+authors = [{ name = "Peter E. Murray", email = "jester@dltj.org" }]
+requires-python = ">=3.12,<4.0"
 readme = "README.md"
 license = { file = "LICENSE.txt" }
 keywords = ["knowledge management", "Obsidian.md"]
-authors = [{ name = "Peter E. Murray", email = "jester@dltj.org" }]
 classifiers = [
   "Development Status :: 5 - Production/Stable",
   "License :: OSI Approved :: MIT License",
   "Programming Language :: Python :: 3",
 ]
+dependencies = [
+  "click",
+  "twitterapi",
+  "omegaconf",
+  "requests",
+  "arrow",
+  "trafilatura",
+  "nltk",
+  "beautifulsoup4",
+  "psutil",
+  "lxml",
+  "sqlalchemy",
+  "mastodon.py",
+
+]
 
 [project.urls]
-"Homepage" = "https://github.com/dltj/km-tools"
+Homepage = "https://github.com/dltj/km-tools"
 "Bug Reports" = "https://github.com/dltj/km-tools/issues"
-"Source" = "https://github.com/dltj/km-tools/"
+Source = "https://github.com/dltj/km-tools/"
+
+[project.scripts]
+kmtools = "kmtools.cli:cli"
+
+
+[dependency-groups]
+dev = ["jedi", "pylint", "black"]
+
+[tool.uv]
+package = false
+
+[[tool.uv.index]]
+name = "pypi"
+url = "https://pypi.org/simple"
+
+[tool.uv.sources]
+kmtools = { path = ".", editable = true }
 
 [tool.pytest.ini_options]
 pythonpath = "kmtools"

@@ -4,31 +4,8 @@ verify_ssl = true
 name = "pypi"
 
 [packages]
-pinboard-to-sqlite = "*"
-twitterapi = "*"
-omegaconf = "*"
-requests = "*"
-"mastodon.py" = "*"
-arrow = "*"
-trafilatura = "*"
-nltk = "*"
-beautifulsoup4 = "*"
-kmtools = {editable = true, path = "."}
-psutil = "*"
-click = "*"
-lxml = "*"
-sqlalchemy = "*"
 
 [dev-packages]
-jedi = "*"
-pylint = "*"
-black = "*"
 
 [requires]
-python_version = "3.12.2"
-
-[pipenv]
-allow_prereleases = true
-
-[scripts]
-kmtools = "kmtools"
+python_version = "3.13"

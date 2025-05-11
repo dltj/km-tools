@@ -6,9 +6,7 @@
         <string>org.dltj.kmtools.daily</string>
         <key>ProgramArguments</key>
         <array>
-            <string>/usr/local/bin/pipenv</string>
-            <string>run</string>
-            <string>kmtools</string>
+            <string>/Users/peter/.local/bin/kmtools</string>
             <string>--verbose</string>
             <string>daily</string>
         </array>

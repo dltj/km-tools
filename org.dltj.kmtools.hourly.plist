@@ -6,9 +6,7 @@
         <string>org.dltj.kmtools.hourly</string>
         <key>ProgramArguments</key>
         <array>
-            <string>/usr/local/bin/pipenv</string>
-            <string>run</string>
-            <string>kmtools</string>
+            <string>/Users/peter/.local/bin/kmtools</string>
             <string>--verbose</string>
             <string>hourly</string>
         </array>
