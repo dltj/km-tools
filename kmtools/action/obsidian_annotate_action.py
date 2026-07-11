@@ -6,12 +6,8 @@ from sqlalchemy.orm import Session
 from kmtools.action.annotation_action_base import AnnotationActionBase
 from kmtools.models import ActionObsidianAnnotation, HypothesisAnnotation, WebResource
 from kmtools.obsidian.source_page import ObsidianSourcePage
-from kmtools.util.config import config
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-config.dry_run = True
 
 
 class AnnotateObsidianPage(AnnotationActionBase):

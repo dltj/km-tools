@@ -2,7 +2,7 @@
 import re
 from abc import abstractmethod
 
-from kmtools.util.config import config
+from kmtools.util.config import get_config
 
 # Annotation = collections.namedtuple(
 #     "Annotation",
@@ -69,6 +69,7 @@ class Resource:
     def __getattr__(self, name):
         # if name in self.
         #     return self[name]
+        config = get_config()
         for action in config.actions:
             if name in action.attributes_supplied:
                 return action.attribute_read(self, name)

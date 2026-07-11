@@ -4,8 +4,9 @@ from time import gmtime, strftime
 import arrow
 
 from kmtools.source import Resource
-from kmtools.util.config import config
+from kmtools.util.config import get_config
 from kmtools.util.obsidian import title_to_page
+from kmtools.util.output_fd import output_fd
 
 
 class ObsidianDb:
@@ -19,22 +20,25 @@ class ObsidianDb:
     @property
     def db_directory(self):
         """Get path to the top of the Obsidian database directory"""
+        config = get_config()
         if not self._db_directory:
-            self._db_directory = config.settings.obsidian.db_directory
+            self._db_directory = config.obsidian.db_directory
         return self._db_directory
 
     @property
     def daily_directory(self):
         """Get the subdirectory name for daily files"""
+        config = get_config()
         if not self._daily_directory:
-            self._daily_directory = config.settings.obsidian.daily_directory
+            self._daily_directory = config.obsidian.daily_directory
         return self._daily_directory
 
     @property
     def source_directory(self):
         """Get the subdirectory name for source files"""
+        config = get_config()
         if not self._source_directory:
-            self._source_directory = config.settings.obsidian.source_directory
+            self._source_directory = config.obsidian.source_directory
         return self._source_directory
 
     def daily_page(self, offset=0):
@@ -82,11 +86,13 @@ class ObsidianDb:
 
         :returns: Full path to the page in the Obsidian database
         """
-        if folder.lower() == "daily":
+        if folder and folder.lower() == "daily":
             folder = self.daily_directory
-        if folder.lower() == "source":
+        elif folder and folder.lower() == "source":
             folder = self.source_directory
-        return os.path.join(self.db_directory, folder, page + ".md")
+        if folder:
+            return os.path.join(self.db_directory, folder, page + ".md")
+        return os.path.join(self.db_directory, page + ".md")
 
     def init_source(self, source: Resource):
         """If necessary, create a new source file in Obsidian and write the source's metadata
@@ -99,7 +105,7 @@ class ObsidianDb:
         """
         output_filepath, output_filename = obsidiandb.source_page_path(source.headline)
         if not os.path.exists(output_filepath):
-            with config.output_fd(output_filepath) as source_fd:
+            with output_fd(output_filepath) as source_fd:
                 if source.tags:
                     # Dash to space
                     tag_list = map(lambda x: x.replace("-", " "), source.tags)

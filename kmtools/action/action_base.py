@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from kmtools.exceptions import ActionError, ActionSkip
 from kmtools.models import ProcessStatus, ProcessStatusEnum, WebResource
-from kmtools.util import database
+from kmtools.util.database import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -48,7 +48,7 @@ class ActionBase:
     def run(self) -> None:
         """Process all unprocessed WebResources."""
 
-        with Session(database.engine, autoflush=False) as session:
+        with get_session() as session:
             logging.debug(
                 "Looking for unprocessed resources for %s", self.__class__.__name__
             )
@@ -85,6 +85,7 @@ class ActionBase:
                     process_status = ProcessStatus(
                         resource_id=resource.id,
                         action_name=self.action_name,
+                        status=ProcessStatusEnum.RETRYABLE,
                         retries=0,
                     )
                     session.add(process_status)

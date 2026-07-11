@@ -8,7 +8,7 @@ from sqlalchemy.orm import Session, joinedload
 
 from kmtools.exceptions import ActionError, ActionSkip
 from kmtools.models import AnnotationStatus, HypothesisAnnotation, ProcessStatusEnum
-from kmtools.util import database
+from kmtools.util.database import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -50,7 +50,7 @@ class AnnotationActionBase:
     def run(self) -> None:
         """Process all unprocessed HypothesisAnnotation records."""
 
-        with Session(database.engine, autoflush=False) as session:
+        with get_session() as session:
             logging.debug(
                 "Looking for unprocessed annotations for %s", self.__class__.__name__
             )

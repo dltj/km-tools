@@ -5,11 +5,10 @@ import click
 import requests
 from dateutil.parser import isoparse
 from sqlalchemy import desc, select
-from sqlalchemy.orm import Session
 
 from kmtools import exceptions
 from kmtools.models import Pinboard, VisibilityEnum
-from kmtools.util import database
+from kmtools.util.database import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -57,7 +56,7 @@ def fetch(ctx_obj):
         "format": "json",
     }
 
-    with Session(database.engine) as session:
+    with get_session() as session:
         # Query the most recent Pinboard entry based on the 'time' column
         stmt = select(Pinboard).order_by(desc(Pinboard.saved_timestamp)).limit(1)
 
@@ -70,7 +69,7 @@ def fetch(ctx_obj):
             )
 
         logger.debug("Calling Pinboard with %s (plus auth)", params)
-        params["auth_token"] = ctx_obj.settings.pinboard.auth_token
+        params["auth_token"] = ctx_obj.pinboard.auth_token.get_secret_value()
 
         r = requests.get(
             "https://api.pinboard.in/v1/posts/all", params=params, timeout=30

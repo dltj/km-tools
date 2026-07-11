@@ -9,8 +9,8 @@ from sqlalchemy.orm import Session, joinedload
 from kmtools.action.action_base import ActionBase
 from kmtools.exceptions import ActionError, ActionSkip
 from kmtools.models import ActionWayback, WebResource
-from kmtools.util import database
-from kmtools.util.config import config
+from kmtools.util.config import get_config
+from kmtools.util.database import get_session
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -28,12 +28,13 @@ def _make_wayback_request(method: str, url: str, data: dict = None) -> dict:
         data,
     )
 
+    config = get_config()
     if config.dry_run:  # pylint: disable=R1720
         logger.info("Would have archived: %s", url)
-        return
+        return {}
 
     wayback_headers["Authorization"] = (
-        f"LOW {config.settings.wayback.access_key}:{config.settings.wayback.secret_key}"
+        f"LOW {config.wayback.access_key}:{config.wayback.secret_key.get_secret_value()}"
     )
 
     try:
@@ -225,7 +226,7 @@ class ResultsFromWaybackAction(ActionBase):
         ## If there is no process_status record yet, then we have nothing to check. Tell
         ## the action runner to skip this resource.
         stmnt = select(ActionWayback).where(ActionWayback.resource_id == resource.id)
-        wayback_action = session.execute(stmnt).scalars().first()
+        wayback_action = get_session().execute(stmnt).scalars().first()
         if not wayback_action:
             raise ActionSkip("No ActionWayback object for WebResource yet")
 
@@ -246,7 +247,7 @@ class ResultsFromWaybackAction(ActionBase):
 
 
 def find_entry(url: str) -> WebResource:
-    with Session(database.engine, autoflush=False) as session:
+    with get_session() as session:
         resource: WebResource = (
             session.scalars(
                 select(WebResource)

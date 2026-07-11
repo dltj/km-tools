@@ -7,7 +7,7 @@ from sqlalchemy.orm import Session
 from kmtools.action.action_base import ActionBase
 from kmtools.exceptions import ActionError
 from kmtools.models import ActionMastodon, WebResource
-from kmtools.util.config import config
+from kmtools.util.config import get_config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -26,11 +26,12 @@ class PostToMastodonAction(ActionBase):
 
         :returns: URI of the toot
         """
+        config = get_config()
         mastodon_client = mastodon_library(
-            client_id=config.settings.mastodon.client_id,
-            client_secret=config.settings.mastodon.client_secret,
-            access_token=config.settings.mastodon.access_token,
-            api_base_url=config.settings.mastodon.api_base_url,
+            client_id=config.mastodon.client_id,
+            client_secret=config.mastodon.client_secret.get_secret_value(),
+            access_token=config.mastodon.access_token.get_secret_value(),
+            api_base_url=config.mastodon.api_base_url,
         )
 
         annotation_addition = ""

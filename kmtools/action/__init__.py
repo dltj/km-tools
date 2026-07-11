@@ -5,7 +5,8 @@ from logging import getLogger
 from typing import Callable, List
 
 from kmtools.source import Origin, Resource
-from kmtools.util.config import config
+from kmtools.util.config import get_config
+from kmtools.util.database import get_sqlite_connection
 
 logger = getLogger(__name__)
 
@@ -32,7 +33,8 @@ class Action(object):
         :return: None
         """
 
-        db = config.kmtools_db
+        config = get_config()
+        db = get_sqlite_connection(config)
         search_cur = db.cursor()
         query = (
             f"SELECT origin.{origin.origin_key} FROM {origin.origin_table} origin "
@@ -51,7 +53,8 @@ class Action(object):
         raise NotImplementedError("attribute_read not implemented")
 
     def _attribute_read(self, name: str, action_table: str, url: str) -> str:
-        db = config.kmtools_db
+        config = get_config()
+        db = get_sqlite_connection(config)
         search_cur = db.cursor()
         query = f"SELECT {name} FROM {action_table} WHERE url LIKE ?"
         values = [url]
@@ -84,7 +87,8 @@ class Action(object):
             raise TypeError(
                 "Number of values in 'columns' does not match number of values in 'attributes'."
             )
-        db = config.kmtools_db
+        config = get_config()
+        db = get_sqlite_connection(config)
         insert_cur = db.cursor()
         sql_placeholders = f"{','.join('?' * len(attributes))}"
         query = f"INSERT INTO {self.action_table} (url, timestamp, origin, {', '.join(columns)}) VALUES (?, ?, ?,{sql_placeholders}) ON CONFLICT DO UPDATE SET ({', '.join(columns)}) = ({sql_placeholders}) WHERE url = ? AND origin = ?"

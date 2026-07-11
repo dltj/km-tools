@@ -1,7 +1,5 @@
 # Project-specific
-auth.json
-config.yml
-*.sqlite3
+local-data
 .vscode/
 
 # Byte-compiled / optimized / DLL files

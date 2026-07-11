@@ -2,27 +2,27 @@ from pathlib import Path
 
 import yaml
 
-from kmtools.util.config import config
+from kmtools.util.config import get_config
 
 
 class ObsidianPageBase:
-
     def __init__(self, file_name: str) -> None:
         self.file_name = file_name
-        self.frontmatter = {}
+        self.frontmatter: dict[str, str] = {}
         self.content = ""
 
         class_name = self.__class__.__name__
+        config = get_config()
         if class_name == "ObsidianDailyPage":
-            self._subdirectory = config.settings.obsidian.daily_directory
+            self._subdirectory = config.obsidian.daily_directory
             self._template_file = "Header — Daily.md"
         elif class_name == "ObsidianSourcePage":
-            self._subdirectory = config.settings.obsidian.source_directory
+            self._subdirectory = config.obsidian.source_directory
             self._template_file = "Header — Source.md"
         else:
             raise ValueError(f"Directory configuration not found for {class_name}")
         self.filepath = Path(
-            config.settings.obsidian.db_directory, self._subdirectory, self.file_name
+            config.obsidian.db_directory, self._subdirectory, self.file_name
         )
 
         self._read_file()
@@ -80,9 +80,10 @@ class ObsidianPageBase:
             text = self.read_template()
             print(text)
         """
+        config = get_config()
         templatepath = Path(
-            config.settings.obsidian.db_directory,
-            config.settings.obsidian.template_directory,
+            config.obsidian.db_directory,
+            config.obsidian.template_directory,
             self._template_file,
         )
         with templatepath.open("r", encoding="utf-8") as f:

@@ -4,11 +4,10 @@ import click
 import requests
 from dateutil.parser import isoparse
 from sqlalchemy import desc, select
-from sqlalchemy.orm import Session
 
 from kmtools import exceptions
 from kmtools.models import HypothesisAnnotation, VisibilityEnum
-from kmtools.util import database
+from kmtools.util.database import get_session
 
 logger = logging.getLogger(__name__)
 
@@ -61,7 +60,7 @@ def fetch_command(details):
     return fetch(details)
 
 
-def fetch(details):
+def fetch(config):
     """Update local Hypothesis database"""
 
     headers = {
@@ -70,10 +69,10 @@ def fetch(details):
     params = {
         "sort": "updated",
         "order": "asc",
-        "user": details.settings.hypothesis.user,
+        "user": config.hypothesis.user,
     }
 
-    with Session(database.engine) as session:
+    with get_session() as session:
         # Query the most recent Pinboard entry based on the 'time' column
         stmt = (
             select(HypothesisAnnotation)
@@ -91,7 +90,9 @@ def fetch(details):
             )
 
         logger.debug("Calling Hypothesis with %s (plus auth) and %s", headers, params)
-        headers["Authorization"] = f"Bearer {details.settings.hypothesis.api_token}"
+        headers["Authorization"] = (
+            f"Bearer {config.hypothesis.api_token.get_secret_value()}"
+        )
 
         r = requests.get(
             "https://api.hypothes.is/api/search",
@@ -143,7 +144,7 @@ def fetch(details):
                 if annotation["hidden"]
                 else VisibilityEnum.PUBLIC
             )
-            hypothesis_annotation.flagged = int(annotation["flagged"] == True)
+            hypothesis_annotation.flagged = int(annotation["flagged"])
 
             hypothesis_page.shared = (
                 VisibilityEnum.PRIVATE

@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from kmtools.action.action_base import ActionBase
 from kmtools.exceptions import ActionError, ActionSkip
 from kmtools.models import ActionKagi, WebResource
-from kmtools.util.config import config
+from kmtools.util.config import get_config
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -21,6 +21,7 @@ def get_summary(url_to_summarize: str) -> str:
 
     :return: Summary paragraph as returned by Kagi
     """
+    config = get_config()
     kagi_params = {"url": url_to_summarize}
     kagi_headers = {"Accept": "application/json"}
 
@@ -29,7 +30,7 @@ def get_summary(url_to_summarize: str) -> str:
         kagi_params,
         kagi_headers,
     )
-    kagi_headers["Authorization"] = f"Bot {config.settings.kagi.api_token}"
+    kagi_headers["Authorization"] = f"Bot {config.kagi.api_token.get_secret_value()}"
     try:
         r = requests.get(
             "https://kagi.com/api/v0/summarize",

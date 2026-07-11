@@ -6,7 +6,7 @@ from sqlalchemy.orm import Session
 from kmtools.action.action_base import ActionBase
 from kmtools.models import ActionObsidianDaily, WebResource
 from kmtools.obsidian.daily_page import ObsidianDailyPage
-from kmtools.util.config import config
+from kmtools.util.config import get_config
 from kmtools.util.obsidian import title_to_page
 
 logger = logging.getLogger(__name__)
@@ -43,6 +43,7 @@ class AddToObsidianDaily(ActionBase):
 
 def main():
     logger.setLevel(logging.DEBUG)
+    config = get_config()
     config.dry_run = True
 
     actions = [

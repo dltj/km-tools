@@ -5,12 +5,8 @@ from sqlalchemy.orm import Session
 from kmtools.action.action_base import ActionBase
 from kmtools.models import ActionObsidianHourly, WebResource
 from kmtools.obsidian.source_page import ObsidianSourcePage
-from kmtools.util.config import config
 
 logger = logging.getLogger(__name__)
-logger.setLevel(logging.DEBUG)
-
-config.dry_run = True
 
 
 class SaveToObsidian(ActionBase):
