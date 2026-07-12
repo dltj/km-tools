@@ -15,7 +15,7 @@ class AnnotateObsidianPage(AnnotationActionBase):
 
     action_name = "ObsidianAnnotateAction"
 
-    def process(self, session: Session, annotation: HypothesisAnnotation) -> None:
+    def process(self, session: Session, resource: HypothesisAnnotation) -> None:
         """Add an annotation to an Obsidian knowledgebase source page
 
         :param session: SQLAlchemy session
@@ -24,12 +24,14 @@ class AnnotateObsidianPage(AnnotationActionBase):
         :raises:
             - ActionException: when the attempt to post to Obsidian results in an error
         """
+        # To keep the rest of this method clear, we will use the following variable names:
+        annotation: HypothesisAnnotation = resource
+        page_resource: WebResource = annotation.page
 
-        resource: WebResource = annotation.page
         obsidian_annotation_action: ActionObsidianAnnotation = ActionObsidianAnnotation(
             annotation=annotation
         )
-        obsidian_source_page = ObsidianSourcePage(page_title=resource.headline)
+        obsidian_source_page = ObsidianSourcePage(page_title=page_resource.headline)
         quote = annotation.quote.strip()
         quote = re.sub(r"\s*\n\s*\n\s*", "\n", quote)
         quote = re.sub(r"\n", "\n> ", quote)

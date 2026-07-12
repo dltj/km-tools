@@ -4,13 +4,21 @@ import enum
 import json
 import logging
 import re
-from typing import ClassVar, List, Optional, Tuple
+from typing import List, Optional, Tuple
 
 import requests
 from bs4 import BeautifulSoup
-from sqlalchemy import Column, DateTime
+from sqlalchemy import (
+    Column,
+    DateTime,
+    ForeignKey,
+    Integer,
+    String,
+    UniqueConstraint,
+    func,
+    select,
+)
 from sqlalchemy import Enum as SqlEnum
-from sqlalchemy import ForeignKey, Integer, String, func, select
 from sqlalchemy.ext.declarative import declared_attr
 from sqlalchemy.orm import Mapped, Session, mapped_column, relationship
 
@@ -54,20 +62,32 @@ class WebResource(Base):
     href: Mapped[str] = mapped_column(String)
     title: Mapped[str] = mapped_column(String)
     saved_timestamp: Mapped[DateTime] = Column(DateTime(timezone=True))
-    _headline: ClassVar[str] = None
-    _publisher: ClassVar[str] = None
+    _headline = None
+    _publishe = None
 
     @declared_attr
     def process_status(cls) -> Mapped[List["ProcessStatus"]]:
-        return relationship("ProcessStatus", back_populates="resource")
+        return relationship(
+            "ProcessStatus", back_populates="resource", cascade="all, delete-orphan"
+        )
 
     @declared_attr
     def action_summary(cls) -> Mapped["ActionSummary"]:
-        return relationship("ActionSummary", back_populates="resource", uselist=False)
+        return relationship(
+            "ActionSummary",
+            back_populates="resource",
+            uselist=False,
+            cascade="all, delete-orphan",
+        )
 
     @declared_attr
     def action_mastodon(cls) -> Mapped["ActionMastodon"]:
-        return relationship("ActionMastodon", back_populates="resource", uselist=False)
+        return relationship(
+            "ActionMastodon",
+            back_populates="resource",
+            uselist=False,
+            cascade="all, delete-orphan",
+        )
 
     @declared_attr
     def action_wayback(cls) -> Mapped["ActionWayback"]:
@@ -80,18 +100,29 @@ class WebResource(Base):
 
     @declared_attr
     def action_kagi(cls) -> Mapped["ActionKagi"]:
-        return relationship("ActionKagi", back_populates="resource", uselist=False)
+        return relationship(
+            "ActionKagi",
+            back_populates="resource",
+            uselist=False,
+            cascade="all, delete-orphan",
+        )
 
     @declared_attr
     def action_obsidian_hourly(cls) -> Mapped["ActionObsidianHourly"]:
         return relationship(
-            "ActionObsidianHourly", back_populates="resource", uselist=False
+            "ActionObsidianHourly",
+            back_populates="resource",
+            uselist=False,
+            cascade="all, delete-orphan",
         )
 
     @declared_attr
     def action_obsidian_daily(cls) -> Mapped["ActionObsidianDaily"]:
         return relationship(
-            "ActionObsidianDaily", back_populates="resource", uselist=False
+            "ActionObsidianDaily",
+            back_populates="resource",
+            uselist=False,
+            cascade="all, delete-orphan",
         )
 
     @property
@@ -156,7 +187,7 @@ class WebResource(Base):
         if match := title_scan.match(self.title):  # pylint: disable=no-member
             self._headline = f"{match.group(1)}"
             if title_comment := match.group(3):
-                description = f"_{title_comment}_\n\n{self.description}"  # pylint: disable=no-member
+                self.description = f"_{title_comment}_\n\n{self.description}"  # pylint: disable=no-member
             if headline_extra := match.group(5):
                 self._headline = f"{self._headline} – {headline_extra}"
             self._publisher = match.group(6)
@@ -208,8 +239,8 @@ class Pinboard(WebResource):
 class HypothesisPage(WebResource):
     __tablename__ = "hypothesis_pages"
     __mapper_args__ = {"polymorphic_identity": "hypothesis"}
-    _normalized_url: ClassVar[str] = None
-    _annotation_url: ClassVar[str] = None
+    _normalized_url = None
+    _annotation_url = None
 
     id: Mapped[int] = mapped_column(ForeignKey("webresource.id"), primary_key=True)
     _shared: Mapped[Optional[VisibilityEnum]] = mapped_column(
@@ -313,12 +344,18 @@ class HypothesisAnnotation(Base):
 
     @declared_attr
     def annotation_status(cls) -> Mapped[List["AnnotationStatus"]]:
-        return relationship("AnnotationStatus", back_populates="annotation")
+        return relationship(
+            "AnnotationStatus",
+            back_populates="annotation",
+        )
 
     @declared_attr
     def action_obsidian_annotation(cls) -> Mapped["ActionObsidianAnnotation"]:
         return relationship(
-            "ActionObsidianAnnotation", back_populates="annotation", uselist=False
+            "ActionObsidianAnnotation",
+            back_populates="annotation",
+            uselist=False,
+            cascade="all, delete-orphan",
         )
 
     # Create native Python lists for stored JSON tag array structures
@@ -346,7 +383,7 @@ class HypothesisAnnotation(Base):
             else:
                 raise TypeError("Data must be a list of strings.")
         else:
-            self.tags = None
+            self._tags = None
 
     @classmethod
     def create_with_page(
@@ -438,7 +475,7 @@ class AnnotationStatus(Base):
     )
     action_name: Mapped[str]
     status: Mapped[ProcessStatusEnum] = mapped_column(
-        SqlEnum(ProcessStatusEnum), nullable=False
+        SqlEnum(ProcessStatusEnum), nullable=False, default=ProcessStatusEnum.RETRYABLE
     )
     processed_at = mapped_column(
         DateTime(),
@@ -448,7 +485,8 @@ class AnnotationStatus(Base):
     retries = Column(Integer, default=0, nullable=False)
 
     annotation: Mapped[HypothesisAnnotation] = relationship(
-        "HypothesisAnnotation", back_populates="annotation_status"
+        "HypothesisAnnotation",
+        back_populates="annotation_status",
     )
 
 
@@ -459,7 +497,7 @@ class ProcessStatus(Base):
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
     action_name: Mapped[str]
     status: Mapped[ProcessStatusEnum] = mapped_column(
-        SqlEnum(ProcessStatusEnum), nullable=False
+        SqlEnum(ProcessStatusEnum), nullable=False, default=ProcessStatusEnum.RETRYABLE
     )
     processed_at = mapped_column(
         DateTime(),
@@ -478,6 +516,7 @@ class ProcessStatus(Base):
 
 class ActionSummary(Base):
     __tablename__ = "action_summary"
+    __table_args__ = (UniqueConstraint("resource_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
     processed_at = mapped_column(
@@ -494,6 +533,7 @@ class ActionSummary(Base):
 
 class ActionMastodon(Base):
     __tablename__ = "action_mastodon"
+    __table_args__ = (UniqueConstraint("resource_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
     processed_at = mapped_column(
@@ -509,6 +549,7 @@ class ActionMastodon(Base):
 
 class ActionWayback(Base):
     __tablename__ = "action_wayback"
+    __table_args__ = (UniqueConstraint("resource_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
     processed_at = mapped_column(
@@ -526,6 +567,7 @@ class ActionWayback(Base):
 
 class ActionKagi(Base):
     __tablename__ = "action_kagi"
+    __table_args__ = (UniqueConstraint("resource_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
     processed_at = mapped_column(
@@ -541,6 +583,7 @@ class ActionKagi(Base):
 
 class ActionObsidianHourly(Base):
     __tablename__ = "action_obsidian_hourly"
+    __table_args__ = (UniqueConstraint("resource_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
     processed_at = mapped_column(
@@ -556,6 +599,7 @@ class ActionObsidianHourly(Base):
 
 class ActionObsidianDaily(Base):
     __tablename__ = "action_obsidian_daily"
+    __table_args__ = (UniqueConstraint("resource_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
     processed_at = mapped_column(
@@ -571,6 +615,7 @@ class ActionObsidianDaily(Base):
 
 class ActionObsidianAnnotation(Base):
     __tablename__ = "action_obsidian_annotation"
+    __table_args__ = (UniqueConstraint("annotation_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     annotation_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("hypothesis_annotation.id")

@@ -4,16 +4,17 @@ from mastodon import Mastodon as mastodon_library
 from mastodon import errors as mastodon_errors
 from sqlalchemy.orm import Session
 
-from kmtools.action.action_base import ActionBase
 from kmtools.exceptions import ActionError
 from kmtools.models import ActionMastodon, WebResource
 from kmtools.util.config import get_config
+
+from .web_resource_action_base import WebResourceActionBase
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
 
 
-class PostToMastodonAction(ActionBase):
+class PostToMastodonAction(WebResourceActionBase):
     """Post a resource to Mastodon"""
 
     action_name = "MastodonAction"
@@ -77,7 +78,7 @@ class PostToMastodonAction(ActionBase):
         try:
             toot_uri = PostToMastodonAction._toot_resource(resource)
         except mastodon_errors.MastodonError as e:
-            raise ActionError from e
+            raise ActionError("Mastodon error") from e
 
         mastodon_action.toot_uri = toot_uri
         # Note: Not committing the session here because the process_status object nees a status

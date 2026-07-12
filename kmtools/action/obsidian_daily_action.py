@@ -3,16 +3,16 @@ from datetime import date
 
 from sqlalchemy.orm import Session
 
-from kmtools.action.action_base import ActionBase
 from kmtools.models import ActionObsidianDaily, WebResource
 from kmtools.obsidian.daily_page import ObsidianDailyPage
-from kmtools.util.config import get_config
 from kmtools.util.obsidian import title_to_page
+
+from .web_resource_action_base import WebResourceActionBase
 
 logger = logging.getLogger(__name__)
 
 
-class AddToObsidianDaily(ActionBase):
+class AddToObsidianDaily(WebResourceActionBase):
     """Add resource to the Obsidian Daily page"""
 
     action_name = "ObsidianDailyAction"
@@ -39,20 +39,3 @@ class AddToObsidianDaily(ActionBase):
         )
         session.add(obsidian_daily_action)
         return
-
-
-def main():
-    logger.setLevel(logging.DEBUG)
-    config = get_config()
-    config.dry_run = True
-
-    actions = [
-        AddToObsidianDaily(),
-    ]
-
-    for action in actions:
-        action.run()
-
-
-if __name__ == "__main__":
-    main()

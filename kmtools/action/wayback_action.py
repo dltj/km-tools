@@ -4,13 +4,14 @@ from typing import Tuple
 
 import requests
 from sqlalchemy import select
-from sqlalchemy.orm import Session, joinedload
+from sqlalchemy.orm import Session, selectinload
 
-from kmtools.action.action_base import ActionBase
 from kmtools.exceptions import ActionError, ActionSkip
 from kmtools.models import ActionWayback, WebResource
 from kmtools.util.config import get_config
 from kmtools.util.database import get_session
+
+from .web_resource_action_base import WebResourceActionBase
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -83,7 +84,7 @@ def _make_wayback_request(method: str, url: str, data: dict = None) -> dict:
     return wayback_response
 
 
-class SaveToWaybackAction(ActionBase):
+class SaveToWaybackAction(WebResourceActionBase):
     """Save a URL to the WayBack machine
 
     This class is the first of a two-stage process. The process() method
@@ -149,7 +150,7 @@ class SaveToWaybackAction(ActionBase):
         return
 
 
-class ResultsFromWaybackAction(ActionBase):
+class ResultsFromWaybackAction(WebResourceActionBase):
     """Retrieve results from a Wayback save-page-now request
 
     This class is the second of a two-stage process. The process() method
@@ -226,7 +227,7 @@ class ResultsFromWaybackAction(ActionBase):
         ## If there is no process_status record yet, then we have nothing to check. Tell
         ## the action runner to skip this resource.
         stmnt = select(ActionWayback).where(ActionWayback.resource_id == resource.id)
-        wayback_action = get_session().execute(stmnt).scalars().first()
+        wayback_action = session.execute(stmnt).scalars().first()
         if not wayback_action:
             raise ActionSkip("No ActionWayback object for WebResource yet")
 
@@ -252,7 +253,7 @@ def find_entry(url: str) -> WebResource:
             session.scalars(
                 select(WebResource)
                 .where(WebResource.href == url)
-                .options(joinedload("*"))
+                .options(selectinload("*"))
             )
             .unique()
             .one()

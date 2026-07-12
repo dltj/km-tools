@@ -3,10 +3,11 @@ import logging
 import requests
 from sqlalchemy.orm import Session
 
-from kmtools.action.action_base import ActionBase
 from kmtools.exceptions import ActionError, ActionSkip
 from kmtools.models import ActionKagi, WebResource
 from kmtools.util.config import get_config
+
+from .web_resource_action_base import WebResourceActionBase
 
 logger = logging.getLogger(__name__)
 logger.setLevel(logging.DEBUG)
@@ -41,9 +42,14 @@ def get_summary(url_to_summarize: str) -> str:
         logger.debug("Kagi returned code %s with %s", r.status_code, r.content)
         response_json = r.json()
     except requests.HTTPError as ex:
-        raise ActionSkip(r.content) from ex
-    except requests.exceptions.JSONDecodeError as ex:
-        raise ActionSkip(r.content) from ex
+        resp = getattr(ex, "response", None)
+        body = resp.content if resp is not None else str(ex)
+        raise ActionSkip(body) from ex
+    except (ValueError, requests.exceptions.JSONDecodeError) as ex:
+        # JSON decoding or value errors: include any response body if available
+        resp = locals().get("r")
+        body = resp.content if resp is not None else str(ex)
+        raise ActionSkip(body) from ex
 
     if "error" in response_json:
         raise ActionError(f"Kagi returned {response_json['error'][0]['msg']}")
@@ -53,7 +59,7 @@ def get_summary(url_to_summarize: str) -> str:
     return response_json["data"]["output"]
 
 
-class SummarizeWithKagiAction(ActionBase):
+class SummarizeWithKagiAction(WebResourceActionBase):
     """Summarize a resource with Kagi"""
 
     action_name = "KagiAction"

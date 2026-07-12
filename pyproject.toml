@@ -45,8 +45,6 @@ kmtools = "kmtools.cli:cli"
 [dependency-groups]
 dev = ["jedi", "pylint", "black"]
 
-[tool.uv]
-
 [[tool.uv.index]]
 name = "pypi"
 url = "https://pypi.org/simple"

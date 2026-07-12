@@ -8,9 +8,10 @@ import trafilatura
 from sqlalchemy.orm import Session
 from trafilatura.settings import use_config
 
-from kmtools.action.action_base import ActionBase
 from kmtools.exceptions import ActionError, SummarizeError
 from kmtools.models import ActionSummary, WebResource
+
+from .web_resource_action_base import WebResourceActionBase
 
 logger = logging.getLogger(__name__)
 
@@ -122,7 +123,7 @@ def get_summary(resource_url: str) -> Tuple[str, str]:
     return derived_date, summarization
 
 
-class SummarizeAction(ActionBase):
+class SummarizeAction(WebResourceActionBase):
     """Summarize a resource"""
 
     action_name = "SummarizeAction"
