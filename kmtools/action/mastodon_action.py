@@ -73,13 +73,13 @@ class PostToMastodonAction(WebResourceActionBase):
             - ActionException: when the attempt to post to Mastodon results in an error
         """
 
-        mastodon_action: ActionMastodon = ActionMastodon(resource=resource)
-        session.add(mastodon_action)
         try:
             toot_uri = PostToMastodonAction._toot_resource(resource)
         except mastodon_errors.MastodonError as e:
             raise ActionError("Mastodon error") from e
-
-        mastodon_action.toot_uri = toot_uri
-        # Note: Not committing the session here because the process_status object nees a status
+        mastodon_action: ActionMastodon = ActionMastodon(
+            resource=resource, toot_uri=toot_uri
+        )
+        session.add(mastodon_action)
+        # Note: Not committing the session here because the process_status object needs a status
         return
