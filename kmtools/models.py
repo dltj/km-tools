@@ -4,12 +4,12 @@ import enum
 import json
 import logging
 import re
+from datetime import datetime
 from typing import List, Optional, Tuple
 
 import requests
-from bs4 import BeautifulSoup
+from bs4 import BeautifulSoup, Tag
 from sqlalchemy import (
-    Column,
     DateTime,
     ForeignKey,
     Integer,
@@ -61,9 +61,10 @@ class WebResource(Base):
     discriminator: Mapped[str] = mapped_column(String)
     href: Mapped[str] = mapped_column(String)
     title: Mapped[str] = mapped_column(String)
-    saved_timestamp: Mapped[DateTime] = Column(DateTime(timezone=True))
-    _headline = None
-    _publishe = None
+    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
+    saved_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    _headline: Optional[str] = None
+    _publisher: Optional[str] = None
 
     @declared_attr
     def process_status(cls) -> Mapped[List["ProcessStatus"]]:
@@ -126,31 +127,18 @@ class WebResource(Base):
         )
 
     @property
+    def url(self) -> str:
+        """Return the URL for this resource."""
+        return self.href
+
+    @property
     def normalized_url(self) -> str:
         """A computed address for a resource, otherwise its uri.
 
-        WebResource URLs are sometimes links to annotated versions of a general
-        web resource. In those cases, we substitute the annotated resource's URL
-        for the URL that came from the database. There will also be an
-        annotation_url for the original URI from the database. Among other possible
-        links, this can happen for `docdrop.org/video/` and `media.dltj.org/annotated-video`
-        links.
-
-        Returns:
-            str: a URL
+        Subclasses like HypothesisPage override this to substitute annotated
+        resource URLs; the default here is just the resource's own href.
         """
-        if hasattr(self, "_normalized_url"):
-            return self._normalized_url
         return self.url
-
-    @property
-    def url(self):
-        """Return the URL based on the type of resource."""
-        if hasattr(self, "href"):
-            return self.href
-        if hasattr(self, "document_url"):
-            return self.document_url
-        raise NotImplementedError("Subclasses must define a URL attribute")
 
     @property
     def headline(self) -> str:
@@ -161,7 +149,7 @@ class WebResource(Base):
         """
         if not self._headline:
             self._parse_title()
-        return self._headline
+        return self._headline or ""
 
     @property
     def publisher(self) -> str:
@@ -172,7 +160,7 @@ class WebResource(Base):
         """
         if not self._publisher:
             self._parse_title()
-        return self._publisher
+        return self._publisher or ""
 
     def _parse_title(self) -> None:
         title_scan = re.compile(
@@ -202,7 +190,6 @@ class Pinboard(WebResource):
 
     id: Mapped[int] = mapped_column(ForeignKey("webresource.id"), primary_key=True)
     hash: Mapped[str] = mapped_column(String)
-    description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     meta: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     shared: Mapped[VisibilityEnum] = mapped_column(SqlEnum(VisibilityEnum))
     toread: Mapped[int] = mapped_column(Integer)
@@ -246,7 +233,7 @@ class HypothesisPage(WebResource):
     _shared: Mapped[Optional[VisibilityEnum]] = mapped_column(
         "shared", SqlEnum(VisibilityEnum)
     )
-    annotations = relationship(
+    annotations: Mapped[List["HypothesisAnnotation"]] = relationship(
         "HypothesisAnnotation", back_populates="page", cascade="all, delete-orphan"
     )
 
@@ -256,7 +243,7 @@ class HypothesisPage(WebResource):
 
     @property
     def shared(self) -> VisibilityEnum:
-        return self._shared
+        return self._shared or VisibilityEnum.PRIVATE  # Default to PRIVATE if not set
 
     @shared.setter
     def shared(self, shared: VisibilityEnum) -> None:
@@ -291,22 +278,24 @@ class HypothesisPage(WebResource):
                 self._annotation_url,
                 self._normalized_url,
                 self.title,
-                self.publisher,
+                self._publisher,
             ) = self.transcript_urls()
         else:
             self._annotation_url = f"https://via.hypothes.is/{self.href}"
             self._normalized_url = self.href
 
     @property
-    def normalized_url(self):
+    def normalized_url(self) -> str:
         if not self._normalized_url:
             self._url_normalization()
+        assert self._normalized_url is not None, "Normalized URL should not be None"
         return self._normalized_url
 
     @property
-    def annotation_url(self):
+    def annotation_url(self) -> str:
         if not self._annotation_url:
             self._url_normalization()
+        assert self._annotation_url is not None, "Annotation URL should not be None"
         return self._annotation_url
 
     def transcript_urls(self) -> Tuple[str, str, str, str]:
@@ -316,9 +305,9 @@ class HypothesisPage(WebResource):
         episode_id = soup.find("a", id="episode")
         podcast_id = soup.find("span", id="podcast")
         annotation_url = self.href
-        normalized_url = episode_id["href"]
-        title = episode_id.text
-        publisher = podcast_id.text
+        normalized_url = str(episode_id["href"]) if isinstance(episode_id, Tag) else ""
+        title = episode_id.text if isinstance(episode_id, Tag) else ""
+        publisher = podcast_id.text if isinstance(podcast_id, Tag) else ""
         return annotation_url, normalized_url, title, publisher
 
 
@@ -326,11 +315,11 @@ class HypothesisAnnotation(Base):
     __tablename__ = "hypothesis_annotation"
 
     id: Mapped[int] = mapped_column(primary_key=True)
-    page_id = mapped_column(ForeignKey("hypothesis_pages.id"))
+    page_id: Mapped[int] = mapped_column(ForeignKey("hypothesis_pages.id"))
     hyp_id: Mapped[str] = mapped_column(String)
     annotation: Mapped[str] = mapped_column(String)
-    time_created: Mapped[DateTime] = Column(DateTime(timezone=True))
-    time_updated: Mapped[DateTime] = Column(DateTime(timezone=True))
+    time_created: Mapped[datetime] = mapped_column(DateTime(timezone=True))
+    time_updated: Mapped[datetime] = mapped_column(DateTime(timezone=True))
     quote: Mapped[str] = mapped_column(String)
     document_title: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     link_html: Mapped[Optional[str]] = mapped_column(String, nullable=True)
@@ -340,7 +329,9 @@ class HypothesisAnnotation(Base):
     _tags: Mapped[Optional[str]] = mapped_column("tags", String, nullable=True)
 
     # Establish relationship back to HypothesisPage
-    page = relationship("HypothesisPage", back_populates="annotations")
+    page: Mapped["HypothesisPage"] = relationship(
+        "HypothesisPage", back_populates="annotations"
+    )
 
     @declared_attr
     def annotation_status(cls) -> Mapped[List["AnnotationStatus"]]:
@@ -391,7 +382,7 @@ class HypothesisAnnotation(Base):
         session: Session,
         document_url: str,
         document_title: str,
-        saved_timestamp: DateTime,
+        saved_timestamp: datetime,
     ) -> Tuple["HypothesisAnnotation", HypothesisPage]:
         """
         Creates a new HypothesisAnnotation and ensures the associated HypothesisPage exists.
@@ -405,7 +396,7 @@ class HypothesisAnnotation(Base):
         - session (Session): The SQLAlchemy session used for database operations.
         - document_url (str): The URI to associate with the HypothesisPage and HypothesisAnnotation.
         - document_title (str): The title of the document
-        - saved_timestamp (DateTime): Timestamp of when the annotation was created
+        - saved_timestamp (datetime): Timestamp of when the annotation was created
 
         Returns:
         - Tuple[HypothesisAnnotation, HypothesisPage]: A tuple containing the newly
@@ -439,32 +430,6 @@ class HypothesisAnnotation(Base):
 
         return annotation, page
 
-    @property
-    def tag_list(self) -> Optional[List[str]]:
-        """Parse the JSON string of tags and return a list of strings."""
-        try:
-            loaded_data = json.loads(self.tags) if self.tags else None
-            if isinstance(loaded_data, list) and all(
-                isinstance(item, str) for item in loaded_data
-            ):
-                return loaded_data
-            else:
-                raise ValueError("Stored data is not a list of strings.")
-        except (json.JSONDecodeError, ValueError) as e:
-            logging.warning("Decoding error or validation failure: {%s}", e)
-            return None
-
-    @tag_list.setter
-    def tag_list(self, value: Optional[List[str]]) -> None:
-        """Convert a list of strings to a JSON string for storage."""
-        if value is not None:
-            if isinstance(value, list) and all(isinstance(item, str) for item in value):
-                self.tags = json.dumps(value)
-            else:
-                raise TypeError("Data must be a list of strings.")
-        else:
-            self.tags = None
-
 
 class AnnotationStatus(Base):
     __tablename__ = "annotation_status"
@@ -477,12 +442,12 @@ class AnnotationStatus(Base):
     status: Mapped[ProcessStatusEnum] = mapped_column(
         SqlEnum(ProcessStatusEnum), nullable=False, default=ProcessStatusEnum.RETRYABLE
     )
-    processed_at = mapped_column(
+    processed_at: Mapped[datetime] = mapped_column(
         DateTime(),
         default=func.now(),
         nullable=False,
     )
-    retries = Column(Integer, default=0, nullable=False)
+    retries: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     annotation: Mapped[HypothesisAnnotation] = relationship(
         "HypothesisAnnotation",
@@ -499,12 +464,12 @@ class ProcessStatus(Base):
     status: Mapped[ProcessStatusEnum] = mapped_column(
         SqlEnum(ProcessStatusEnum), nullable=False, default=ProcessStatusEnum.RETRYABLE
     )
-    processed_at = mapped_column(
+    processed_at: Mapped[datetime] = mapped_column(
         DateTime(),
         default=func.now(),
         nullable=False,  # pylint:disable=not-callable
     )
-    retries = Column(Integer, default=0, nullable=False)
+    retries: Mapped[int] = mapped_column(Integer, default=0, nullable=False)
 
     resource: Mapped[WebResource] = relationship(
         "WebResource", back_populates="process_status"
@@ -519,7 +484,7 @@ class ActionSummary(Base):
     __table_args__ = (UniqueConstraint("resource_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
-    processed_at = mapped_column(
+    processed_at: Mapped[datetime] = mapped_column(
         DateTime(),
         default=func.now(),
         nullable=False,  # pylint:disable=not-callable
@@ -536,7 +501,7 @@ class ActionMastodon(Base):
     __table_args__ = (UniqueConstraint("resource_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
-    processed_at = mapped_column(
+    processed_at: Mapped[datetime] = mapped_column(
         DateTime(),
         default=func.now(),
         nullable=False,  # pylint:disable=not-callable
@@ -552,7 +517,7 @@ class ActionWayback(Base):
     __table_args__ = (UniqueConstraint("resource_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
-    processed_at = mapped_column(
+    processed_at: Mapped[datetime] = mapped_column(
         DateTime(),
         default=func.now(),
         nullable=False,  # pylint:disable=not-callable
@@ -570,7 +535,7 @@ class ActionKagi(Base):
     __table_args__ = (UniqueConstraint("resource_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
-    processed_at = mapped_column(
+    processed_at: Mapped[datetime] = mapped_column(
         DateTime(),
         default=func.now(),
         nullable=False,  # pylint:disable=not-callable
@@ -586,7 +551,7 @@ class ActionObsidianHourly(Base):
     __table_args__ = (UniqueConstraint("resource_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
-    processed_at = mapped_column(
+    processed_at: Mapped[datetime] = mapped_column(
         DateTime(),
         default=func.now(),
         nullable=False,  # pylint:disable=not-callable
@@ -602,7 +567,7 @@ class ActionObsidianDaily(Base):
     __table_args__ = (UniqueConstraint("resource_id"),)
     id: Mapped[int] = mapped_column(primary_key=True)
     resource_id: Mapped[int] = mapped_column(Integer, ForeignKey("webresource.id"))
-    processed_at = mapped_column(
+    processed_at: Mapped[datetime] = mapped_column(
         DateTime(),
         default=func.now(),
         nullable=False,  # pylint:disable=not-callable
@@ -620,7 +585,9 @@ class ActionObsidianAnnotation(Base):
     annotation_id: Mapped[int] = mapped_column(
         Integer, ForeignKey("hypothesis_annotation.id")
     )
-    processed_at = mapped_column(DateTime(), default=func.now(), nullable=False)
+    processed_at: Mapped[datetime] = mapped_column(
+        DateTime(), default=func.now(), nullable=False
+    )
     filename: Mapped[str] = mapped_column(String)
     annotation: Mapped[HypothesisAnnotation] = relationship(
         "HypothesisAnnotation",
