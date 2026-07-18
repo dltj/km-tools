@@ -1,6 +1,7 @@
 """_Wayback commands_"""
 
 import logging
+from datetime import datetime
 from typing import List
 
 import click
@@ -68,9 +69,14 @@ def hung_jobs():
                         row.url,
                     ),
                 )
-                click.echo(f"https://web.archive.org/web/2025*/{row.url}\n")
+                try:
+                    wayback_year = row.saved_timestamp.year
+                except (AttributeError, TypeError):
+                    wayback_year = datetime.now().year
+
+                click.echo(f"https://web.archive.org/web/{wayback_year}*/{row.url}\n")
                 new_archive_url = click.prompt(
-                    "Enter replacement URL (or return to skip)", type=str
+                    "Enter replacement URL (or return to skip)", type=str, default=""
                 )
                 if new_archive_url:
                     row.action_wayback.wayback_url = new_archive_url
