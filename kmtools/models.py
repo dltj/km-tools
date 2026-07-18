@@ -4,7 +4,9 @@ import enum
 import json
 import logging
 import re
+from dataclasses import dataclass
 from datetime import datetime
+from functools import cached_property
 from typing import List, Optional, Tuple
 
 import requests
@@ -36,6 +38,18 @@ dltjvid_url_scan = re.compile(
 )
 
 
+@dataclass(frozen=True)
+class _ParsedTitle:
+    headline: str
+    publisher: Optional[str]
+
+
+@dataclass(frozen=True)
+class _NormalizedUrl:
+    annotation_url: str
+    normalized_url: str
+
+
 class ProcessStatusEnum(enum.Enum):
     """Enumerated list of possible process statuses."""
 
@@ -63,8 +77,6 @@ class WebResource(Base):
     title: Mapped[str] = mapped_column(String)
     description: Mapped[Optional[str]] = mapped_column(String, nullable=True)
     saved_timestamp: Mapped[datetime] = mapped_column(DateTime(timezone=True))
-    _headline: Optional[str] = None
-    _publisher: Optional[str] = None
 
     @declared_attr
     def process_status(cls) -> Mapped[List["ProcessStatus"]]:
@@ -140,29 +152,8 @@ class WebResource(Base):
         """
         return self.url
 
-    @property
-    def headline(self) -> str:
-        """Get headline potion of a resource title
-
-        Returns:
-            str: headline
-        """
-        if not self._headline:
-            self._parse_title()
-        return self._headline or ""
-
-    @property
-    def publisher(self) -> str:
-        """Get publisher portion of a resource title
-
-        Returns:
-            str: publisher
-        """
-        if not self._publisher:
-            self._parse_title()
-        return self._publisher or ""
-
-    def _parse_title(self) -> None:
+    @cached_property
+    def _parsed_title(self) -> _ParsedTitle:
         title_scan = re.compile(
             r"""(.*?)\s+          # headline proper (group 1)
                 (\[(.*?)\])?      # optionally, a comment/description in square brackets (group 3)
@@ -171,17 +162,22 @@ class WebResource(Base):
             """,
             re.X,
         )
-
-        if match := title_scan.match(self.title):  # pylint: disable=no-member
-            self._headline = f"{match.group(1)}"
+        if match := title_scan.match(self.title):
+            headline = f"{match.group(1)}"
             if title_comment := match.group(3):
-                self.description = f"_{title_comment}_\n\n{self.description}"  # pylint: disable=no-member
+                self.description = f"_{title_comment}_\n\n{self.description}"
             if headline_extra := match.group(5):
-                self._headline = f"{self._headline} – {headline_extra}"
-            self._publisher = match.group(6)
-        else:
-            self._headline = self.title  # pylint: disable=no-member
-            self._publisher = None
+                headline = f"{headline} – {headline_extra}"
+            return _ParsedTitle(headline=headline, publisher=match.group(6))
+        return _ParsedTitle(headline=self.title, publisher=None)
+
+    @property
+    def headline(self) -> str:
+        return self._parsed_title.headline
+
+    @property
+    def publisher(self) -> str:
+        return self._parsed_title.publisher or ""
 
 
 class Pinboard(WebResource):
@@ -261,42 +257,53 @@ class HypothesisPage(WebResource):
         else:
             self._shared = shared
 
-    def _url_normalization(self):
+    @cached_property
+    def _url_normalization(self) -> _NormalizedUrl:
         if match := docdrop_url_scan.match(self.href):
             logger.debug("Found DocDrop match for %s; adjusting URLs.", self.href)
+            return _NormalizedUrl(
+                annotation_url=self.href,
+                normalized_url=f"https://youtube.com/watch?v={match.group(1)}",
+            )
             self._annotation_url = self.href
             self._normalized_url = f"https://youtube.com/watch?v={match.group(1)}"
-        elif match := dltjvid_url_scan.match(self.href):
+        if match := dltjvid_url_scan.match(self.href):
             logger.debug(
                 "Found DLTJ video annotation match for %s; adjusting URLs.",
                 self.href,
             )
-            self._annotation_url = self.href
-            self._normalized_url = f"https://youtube.com/watch?v={match.group(1)}"
-        elif self.href.startswith("https://media.dltj.org/unchecked-transcript/"):
+            return _NormalizedUrl(
+                annotation_url=self.href,
+                normalized_url=f"https://media.dltj.org/annotated-video/{match.group(1)}",
+            )
+        if self.href.startswith("https://media.dltj.org/unchecked-transcript/"):
             (
-                self._annotation_url,
-                self._normalized_url,
-                self.title,
-                self._publisher,
+                annotation_url,
+                normalized_url,
+                title,
+                publisher,
             ) = self.transcript_urls()
-        else:
-            self._annotation_url = f"https://via.hypothes.is/{self.href}"
-            self._normalized_url = self.href
+            logger.debug(
+                "Found DLTJ transcript match for %s; adjusting URLs.", self.href
+            )
+            self.title = title
+            self.description = f"_{publisher}_\n\n{self.description}"
+            return _NormalizedUrl(
+                annotation_url=annotation_url,
+                normalized_url=normalized_url,
+            )
+        return _NormalizedUrl(
+            annotation_url=f"https://via.hypothes.is/{self.href}",
+            normalized_url=self.href,
+        )
 
     @property
     def normalized_url(self) -> str:
-        if not self._normalized_url:
-            self._url_normalization()
-        assert self._normalized_url is not None, "Normalized URL should not be None"
-        return self._normalized_url
+        return self._url_normalization.normalized_url
 
     @property
     def annotation_url(self) -> str:
-        if not self._annotation_url:
-            self._url_normalization()
-        assert self._annotation_url is not None, "Annotation URL should not be None"
-        return self._annotation_url
+        return self._url_normalization.annotation_url
 
     def transcript_urls(self) -> Tuple[str, str, str, str]:
         page = requests.get(self.href, timeout=10)
