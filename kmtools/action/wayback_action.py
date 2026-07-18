@@ -260,24 +260,3 @@ def find_entry(url: str) -> WebResource:
         )
 
         return resource
-
-
-def main():
-    # database.Base.metadata.create_all(database.engine)
-    # with Session(database.engine) as session:
-    #     pinb: Pinboard = Pinboard(
-    #         hash="hashblah", href="hrefbalh", time="tieblah", shared=1, toread=1
-    #     )
-    #     session.add(pinb)
-    #     session.commit()
-
-    actions = [
-        ResultsFromWaybackAction(),
-    ]
-
-    for action in actions:
-        action.run()
-
-
-if __name__ == "__main__":
-    main()

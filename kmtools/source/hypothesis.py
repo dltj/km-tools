@@ -1,6 +1,5 @@
 import logging
 
-import click
 import requests
 from dateutil.parser import isoparse
 from sqlalchemy import desc, select
@@ -10,54 +9,6 @@ from kmtools.models import HypothesisAnnotation, VisibilityEnum
 from kmtools.util.database import get_session
 
 logger = logging.getLogger(__name__)
-
-
-# def output_annotation(self, filepath):
-#     with (config.output_fd(filepath)) as output_fh:
-#         tags = _format_tags(self.tags)
-#         quote = self.quote.strip()
-#         annotation = self.annotation.strip()
-#         # headline = discussion = ""
-#         if annotation.startswith("##"):
-#             headline, _, discussion = annotation.partition("\n")
-#             headline = f"{headline}\n"
-#         else:
-#             headline = ""
-#             discussion = annotation.strip()
-#         if discussion:
-#             discussion = f"{discussion}\n\n"
-#         if tags:
-#             tags = f"- Tags:: {tags}\n"
-#         output_fh.write(
-#             f"{headline}"
-#             f"> {quote}\n\n"
-#             f"{discussion}"
-#             f"- Link to [Annotation]({self.link_incontext})\n{tags}\n"
-#         )
-
-
-# def _format_tags(tag_list):
-#     if tag_list:
-#         # Dash to space
-#         tag_list = map(lambda x: x.replace("-", " "), tag_list)
-#         # Non hashtags to links
-#         tag_list = map(lambda x: f"[[{x}]]" if x[0] != "#" else x, tag_list)
-#         tags = ", ".join(tag_list)
-#     else:
-#         tags = None
-#     return tags
-
-
-@click.group()
-def hypothesis():
-    """Commands for Hypothes.is"""
-
-
-@hypothesis.command(name="fetch")
-@click.pass_obj
-def fetch_command(details):
-    """Retrieve annotations"""
-    return fetch(details)
 
 
 def fetch(config):
@@ -156,32 +107,3 @@ def fetch(config):
         # if "group:__world__" in annotation["permissions"]["read"]:
         session.commit()
         logger.info("Added %s from %s.", annotation["uri"], annotation["updated"])
-
-
-# CREATE TABLE hyp_posts (
-# 	id TEXT PRIMARY KEY,
-# 	uri TEXT NOT NULL,
-# 	annotation TEXT,
-# 	created TEXT,
-# 	updated TEXT,
-# 	quote TEXT,
-# 	tags TEXT,
-# 	document_title TEXT,
-# 	link_html TEXT,
-# 	link_incontext INTEGER,
-# 	hidden INTEGER,
-# 	flagged INTEGER,
-
-# CREATE TABLE hyp_pages (
-# 	uri TEXT PRIMARY KEY,
-# 	title TEXT,
-# 	public INTEGER DEFAULT 0,
-# );
-
-# CREATE TABLE hyp_posts_pages_map (
-# 	uri TEXT NOT NULL,
-# 	annotation_id TEXT NOT NULL,
-# 	FOREIGN KEY (uri) REFERENCES pages(uri),
-# 	FOREIGN KEY (annotation_id) REFERENCES posts(id),
-# 	PRIMARY KEY (uri, annotation_id)
-# );

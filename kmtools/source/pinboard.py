@@ -1,7 +1,6 @@
 import logging
 from sqlite3 import IntegrityError
 
-import click
 import requests
 from dateutil.parser import isoparse
 from sqlalchemy import desc, select
@@ -35,18 +34,6 @@ def get_or_create_pinboard(session, href, title, time):
         # Handle potential race conditions, retry fetch
         session.rollback()
         return session.execute(stmt).scalars().first()
-
-
-@click.group()
-def pinboard():
-    """Commands for Pinboard"""
-
-
-@pinboard.command(name="fetch")
-@click.pass_obj
-def fetch_command(ctx_obj):
-    """Retrieve annotations"""
-    return fetch(ctx_obj)
 
 
 def fetch(ctx_obj):
@@ -103,16 +90,3 @@ def fetch(ctx_obj):
             else:
                 new_pinboard.shared = VisibilityEnum.PRIVATE
             session.commit()
-
-
-# CREATE TABLE pinb_posts (
-#    hash TEXT PRIMARY KEY,
-#    href TEXT,
-#    description TEXT,
-#    extended TEXT,
-#    meta TEXT,
-#    time TEXT,
-#    shared INTEGER,
-#    toread INTEGER,
-#    tags TEXT,
-# );

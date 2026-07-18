@@ -16,8 +16,15 @@ import click
 import psutil
 from pydantic import ValidationError
 
-from kmtools.command import daily, hourly, obsidian, robustify, summarize, wayback
-from kmtools.source import hypothesis, pinboard
+from kmtools.command import (
+    daily,
+    hourly,
+    hypothesis,
+    pinboard,
+    robustify,
+    summarize,
+    wayback,
+)
 from kmtools.util.config import Config, init_config
 from kmtools.util.logging_util import PackagePathFilter
 
@@ -194,7 +201,6 @@ def cli(
 cli.add_command(pinboard.pinboard)
 cli.add_command(hypothesis.hypothesis)
 cli.add_command(wayback.wayback)
-cli.add_command(obsidian.obsidian)
 # cli.add_command(mastodon.mastodon)
 cli.add_command(hourly.hourly)
 cli.add_command(daily.daily)

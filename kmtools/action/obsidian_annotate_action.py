@@ -62,24 +62,3 @@ class AnnotateObsidianPage(AnnotationActionBase):
         obsidian_annotation_action.filename = obsidian_source_page.filepath.as_posix()
         session.add(obsidian_annotation_action)
         return
-
-
-def main():
-    # database.Base.metadata.create_all(database.engine)
-    # with Session(database.engine) as session:
-    #     pinb: Pinboard = Pinboard(
-    #         hash="hashblah", href="hrefbalh", time="tieblah", shared=1, toread=1
-    #     )
-    #     session.add(pinb)
-    #     session.commit()
-
-    actions = [
-        AnnotateObsidianPage(),
-    ]
-
-    for action in actions:
-        action.run()
-
-
-if __name__ == "__main__":
-    main()
