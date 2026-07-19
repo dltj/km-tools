@@ -33,7 +33,7 @@ class ActionBase(Generic[ResourceT, StatusT]):
 
     action_name: str
 
-    def __init__(self, retry_limit: int = 5) -> None:
+    def __init__(self, retry_limit: int = 7) -> None:
         self.retry_limit = retry_limit
 
     # -- Methods subclasses must implement --
