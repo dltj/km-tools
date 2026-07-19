@@ -1,3 +1,6 @@
+import hashlib
+import json
+import logging
 import re
 from pathlib import Path
 
@@ -8,6 +11,9 @@ from kmtools.util.config import get_config
 
 HEADER_SENTINEL = "_header"
 SECTION_HEADING_PATTERN = re.compile(r"^## (.+)$", re.MULTILINE)
+
+
+logger = logging.getLogger(__name__)
 
 
 class ObsidianPageBase:
@@ -41,6 +47,22 @@ class ObsidianPageBase:
         )
 
         self._read_file()
+        self._initial_frontmatter_hash = self._hash_frontmatter()
+        self._initial_content_hash = self._hash_content()
+
+    def _hash_frontmatter(self) -> str:
+        return hashlib.md5(
+            json.dumps(self.frontmatter, sort_keys=True).encode()
+        ).hexdigest()
+
+    def _hash_content(self) -> str:
+        return hashlib.md5(self._reassemble_content().encode()).hexdigest()
+
+    def _is_dirty(self) -> bool:
+        return (
+            self._hash_frontmatter() != self._initial_frontmatter_hash
+            or self._hash_content() != self._initial_content_hash
+        )
 
     def _parse_sections(self, content: str):
         """Splits self.content into a list of Sections.
@@ -90,17 +112,16 @@ class ObsidianPageBase:
 
     def set_section(self, heading: str | None, content: str):
         """Replaces the content of an existing section, or appends a new one."""
-        for section in self.sections:
-            if section.heading == heading:
-                section.content = content
-                if isinstance(section, FieldSection):
-                    section._parse_fields()
-                return
-        # Section not found — append it
         if heading is None or heading in self.FIELD_SECTION_HEADINGS:
-            self.sections.append(FieldSection(heading=heading, content=content))
+            new_section: Section = FieldSection(heading=heading, content=content)
         else:
-            self.sections.append(Section(heading=heading, content=content))
+            new_section = Section(heading=heading, content=content)
+
+        for i, section in enumerate(self.sections):
+            if section.heading == heading:
+                self.sections[i] = new_section
+                return
+        self.sections.append(new_section)
 
     def put_section(self, section: Section):
         """Replaces a Section by matching on section.heading, or appends if not found."""
@@ -147,9 +168,14 @@ class ObsidianPageBase:
 
     def save(self):
         """Writes the current state back to the markdown file."""
+        if not self._is_dirty():
+            return
+        logger.info(f"Saving changes to {self.filepath}")
         with self.filepath.open("w", encoding="utf-8") as f:
             frontmatter_text = yaml.safe_dump(self.frontmatter, sort_keys=False)
             f.write(f"---\n{frontmatter_text}---\n{self._reassemble_content()}")
+        self._initial_frontmatter_hash = self._hash_frontmatter()
+        self._initial_content_hash = self._hash_content()
 
     # def parse_markdown(self):
     #     """Parses the markdown content into HTML or another format."""
