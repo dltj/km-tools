@@ -7,9 +7,22 @@ from kmtools.models import ActionObsidianDaily, WebResource
 from kmtools.obsidian.daily_page import ObsidianDailyPage
 from kmtools.util.obsidian import title_to_page
 
+from .task_base import TaskBase
 from .web_resource_action_base import WebResourceActionBase
 
 logger = logging.getLogger(__name__)
+
+
+class SetupObsidianDaily(TaskBase):
+    """Setup the Obsidian Daily page"""
+
+    task_name = "ObsidianDailySetupTask"
+
+    def run(self) -> None:
+        date_filename = date.today().strftime("%Y-%m-%d") + ".md"
+        logger.info(f"Generating preamble for {date_filename}")
+        with ObsidianDailyPage(file_name=date_filename) as page:
+            page.update_template_dates()
 
 
 class AddToObsidianDaily(WebResourceActionBase):

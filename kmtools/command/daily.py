@@ -2,7 +2,7 @@
 
 import click
 
-from kmtools.action.obsidian_daily_action import AddToObsidianDaily
+from kmtools.action.obsidian_daily_action import AddToObsidianDaily, SetupObsidianDaily
 
 
 @click.command()
@@ -11,6 +11,7 @@ def daily(_):
     """Perform the daily activities"""
 
     actions = [
+        SetupObsidianDaily(),
         AddToObsidianDaily(),
     ]
 
