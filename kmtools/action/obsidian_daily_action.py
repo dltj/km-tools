@@ -28,14 +28,16 @@ class AddToObsidianDaily(WebResourceActionBase):
         """
 
         date_filename = date.today().strftime("%Y-%m-%d") + ".md"
-        obsidian_daily_page = ObsidianDailyPage(file_name=date_filename)
-        obsidian_daily_page.readings.append(
-            f"{resource.__class__.__name__}Resource: [[{title_to_page(resource.headline)}]] ({resource.publisher})"
-        )
-        obsidian_daily_page.save()
+        with ObsidianDailyPage(file_name=date_filename) as page:
+            readings = page.readings
+            readings.append(
+                f"{resource.__class__.__name__}Resource: [[{title_to_page(resource.headline)}]] ({resource.publisher})"
+            )
+            page.readings = readings
+
         obsidian_daily_action: ActionObsidianDaily = ActionObsidianDaily(
             resource_id=resource.id,
-            daily_filename=obsidian_daily_page.filepath.as_posix(),
+            daily_filename=page.filepath.as_posix(),
         )
         session.add(obsidian_daily_action)
         return

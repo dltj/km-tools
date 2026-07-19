@@ -1,10 +1,12 @@
 import logging
+from typing import cast
 
 from sqlalchemy.orm import Session
 
-from kmtools.models import ActionObsidianHourly, WebResource
+from kmtools.models import ActionObsidianHourly, Pinboard, WebResource
 from kmtools.obsidian.source_page import ObsidianSourcePage
 
+from ..obsidian.sections import FieldSection
 from .web_resource_action_base import WebResourceActionBase
 
 logger = logging.getLogger(__name__)
@@ -24,34 +26,34 @@ class SaveToObsidian(WebResourceActionBase):
         :raises:
             - ActionException: when the attempt to post to Obsidian results in an error
         """
-        obsidian_source_page = ObsidianSourcePage(page_title=resource.headline)
-        obsidian_source_page.frontmatter["source_url"] = resource.url
-        obsidian_source_page.frontmatter["origin"] = resource.__class__.__name__
-        obsidian_source_page.frontmatter["bookmark_saved"] = (
-            resource.saved_timestamp.strftime("%Y-%m-%d")
-        )
-        obsidian_source_page.frontmatter["source_created"] = (
-            "unknown"
-            if not resource.action_summary
-            else resource.action_summary.derived_date or "unknown"
-        )
-        obsidian_source_page.frontmatter["publisher"] = resource.publisher
-        if resource.action_kagi:
-            obsidian_source_page.content = (
-                f"Kagi summary:: {resource.action_kagi.kagi_summary}\n\n"
+        with ObsidianSourcePage(page_title=resource.headline) as page:
+            page.frontmatter["source_url"] = resource.url
+            page.frontmatter["origin"] = resource.__class__.__name__
+            page.frontmatter["bookmark_saved"] = resource.saved_timestamp.strftime(
+                "%Y-%m-%d"
             )
-        if resource.action_summary:
-            obsidian_source_page.content += (
-                f"Automated summary:: {resource.action_summary.summary}\n\n"
+            page.frontmatter["source_created"] = (
+                "unknown"
+                if not resource.action_summary
+                else resource.action_summary.derived_date or "unknown"
             )
-        if hasattr(resource, "tags"):
-            obsidian_source_page.content += "Tags:: " + ", ".join(
-                [f"[[{tag}]]" for tag in resource.tags]
+            page.frontmatter["publisher"] = resource.publisher
+
+            preamble = cast(
+                FieldSection, page.get_section(ObsidianSourcePage.SEC_PREAMBLE)
             )
 
-        obsidian_source_page.save()
+            if resource.action_kagi and resource.action_kagi.kagi_summary:
+                preamble.set_field("Kagi summary", resource.action_kagi.kagi_summary)
+            if resource.action_summary and resource.action_summary.summary:
+                preamble.set_field("Automated summary", resource.action_summary.summary)
+            if isinstance(resource, Pinboard) and resource.tags:
+                preamble.set_field(
+                    "Concepts", ", ".join(f"[[{tag}]]" for tag in resource.tags)
+                )
+
         obsidian_hourly_action: ActionObsidianHourly = ActionObsidianHourly(
             resource=resource
         )
-        obsidian_hourly_action.filename = obsidian_source_page.filepath.as_posix()
-        return
+        obsidian_hourly_action.filename = page.filepath.as_posix()
+        session.add(obsidian_hourly_action)

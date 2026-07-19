@@ -1,95 +1,97 @@
-import re
-from datetime import datetime, timedelta
+from datetime import date, datetime
 
-import yaml
+from dateutil.relativedelta import relativedelta
 
 from kmtools.obsidian.page_base import ObsidianPageBase
 
+from .sections import FieldSection
+
 
 class ObsidianDailyPage(ObsidianPageBase):
-    SECTION_START_MARKDOWN = r"^## Yesterday\'s readings\s*$"
-    SECTION_END_DAILY_NOTES = r"^## Daily notes"
+    FIELD_SECTION_HEADINGS = {"End-of-day"}
+
+    SEC_PREAMBLE = None
+    SEC_TAGS = "Tags for Today"
+    SEC_MORNING = "Morning Notes"
+    SEC_READINGS = "Yesterday's readings"
+    SEC_DAILY = "Daily notes"
+    SEC_EOD = "End-of-day"
+
+    DATE_OFFSETS = [
+        ("-72 month", "Six years ago"),
+        ("-60 month", "Five years ago"),
+        ("-48 month", "Four years ago"),
+        ("-36 month", "Three years ago"),
+        ("-24 month", "Two years ago"),
+        ("-18 month", "18 months ago"),
+        ("-12 month", "Last year"),
+        ("-6 month", "Six months ago"),
+        ("-3 month", "Three months ago"),
+        ("-1 month", "Last month"),
+        ("-14 day", "Two weeks ago"),
+        ("-7 day", "Last week"),
+        ("-1 day", "Yesterday"),
+        ("1 day", "Tomorrow"),
+    ]
 
     def __init__(self, file_name: str) -> None:
-        self.readings_content = ""
-        self.content_before = ""
-        self.content_after = ""
-        self.readings: list = []
+        ## First check if `file_name` (minus the `.md` extension) is a parsable YYYY-MM-DD
+        try:
+            self._dateobj: date = datetime.strptime(
+                file_name.removesuffix(".md"), "%Y-%m-%d"
+            ).date()
+        except ValueError:
+            raise ValueError(f"`{file_name}` is not a parsable YYYY-MM-DD date.")
+
         super().__init__(file_name)
 
-    def _read_file(self):
-        super()._read_file()
+    def update_template_dates(self):
+        """Updates date-related fields and the Tags query line in the header section."""
 
-        # Use regex to find the section start and end based on a blank line
-        section_start_regex = re.compile(self.SECTION_START_MARKDOWN, re.MULTILINE)
-        section_end_regex = re.compile(self.SECTION_END_DAILY_NOTES, re.MULTILINE)
+        def parse_timedelta(time_str: str) -> relativedelta:
+            value_str, unit = time_str.split()
+            value = int(value_str)
+            if "day" in unit:
+                return relativedelta(days=value)
+            elif "month" in unit:
+                return relativedelta(months=value)
+            raise ValueError("Unsupported unit")
 
-        # Find the section
-        start_match = section_start_regex.search(self.content)
-        if not start_match:
-            self.content_before = self.content
-            return
+        def get_date_line(daily_note_date: date, offset: str) -> str | None:
+            target_date = daily_note_date + parse_timedelta(offset)
+            target_date_file = (
+                self.DAILY_NOTES / f"{target_date.strftime('%Y-%m-%d')}.md"
+            )
+            if target_date_file.exists():
+                return target_date.strftime("%Y-%m-%d")
+            return None
 
-        # Content before the section
-        self.content_before = self.content[: start_match.start()]
+        preamble = FieldSection(heading=None, content="")
+        preamble.fields["Weekday"] = self._dateobj.strftime("%A")
+        for offset, label in self.DATE_OFFSETS:
+            if date_file := get_date_line(self._dateobj, offset):
+                preamble.fields[label] = f"[[{date_file}]]"
+        self.put_section(preamble)
 
-        # Find the section end
-        following_text = self.content[start_match.end() :]
-        end_match = section_end_regex.search(following_text)
-        if end_match:
-            # Content between the start and end blank line
-            self.readings_content = following_text[: end_match.start()].strip()
-            # Content after the section
-            self.content_after = following_text[end_match.end() :]
-        else:
-            # If no blank line is found, take everything after the start
-            self.readings_content = following_text.strip()
-            self.content_after = ""
+        # Update the Tags for Today section
+        date_today = self._dateobj.strftime("%d-%b")
+        tag_dataview = "\n".join(["```dataview", f"LIST FROM #{date_today}", "```"])
+        self.set_section(self.SEC_TAGS, tag_dataview)
 
-        # Convert a markdown list in `readings_content` to a Python list.
-        # Split the content by new lines, and extract lines starting with '-'
-        lines = self.readings_content.strip().splitlines()
-        self.readings = [
-            line.lstrip("- ").strip() for line in lines if line.startswith("- ")
+    @property
+    def readings(self) -> list[str]:
+        """Returns the Yesterday's readings section as a list of strings."""
+        section = self.get_section(self.SEC_READINGS)
+        if not section or not section.content:
+            return []
+        return [
+            line.lstrip("- ").strip()
+            for line in section.content.splitlines()
+            if line.startswith("- ")
         ]
 
-        # Set/fix dates in content_before
-        weekday_name = datetime.now().strftime("%A")
-        date_14_days_ago = (datetime.now() - timedelta(days=14)).strftime("%Y-%m-%d")
-        date_7_days_ago = (datetime.now() - timedelta(days=7)).strftime("%Y-%m-%d")
-        date_yesterday = (datetime.now() - timedelta(days=1)).strftime("%Y-%m-%d")
-        date_tomorrow = (datetime.now() + timedelta(days=1)).strftime("%Y-%m-%d")
-        date_today = datetime.now().strftime("%d-%b")
-
-        output_lines = []
-        for line in self.content_before.splitlines():
-            if line.startswith("Weekday::"):
-                output_lines.append(f"Weekday:: {weekday_name}")
-                continue
-            if line.startswith("Two weeks ago::"):
-                output_lines.append(f"Two weeks ago:: [[{date_14_days_ago}]]")
-                continue
-            if line.startswith("Last week::"):
-                output_lines.append(f"Last week:: [[{date_7_days_ago}]]")
-                continue
-            if line.startswith("Yesterday::"):
-                output_lines.append(f"Yesterday:: [[{date_yesterday}]]")
-                continue
-            if line.startswith("Tomorrow::"):
-                output_lines.append(f"Tomorrow:: [[{date_tomorrow}]]")
-                continue
-            if line.startswith("LIST FROM #"):
-                output_lines.append(f"LIST FROM #{date_today}")
-                continue
-            output_lines.append(line)
-        self.content_before = "\n".join(output_lines)
-
-    def save(self):
-        self.readings_content = "\n".join(f"- {item}" for item in self.readings)
-        with self.filepath.open("w", encoding="utf-8") as f:
-            frontmatter_text = yaml.safe_dump(self.frontmatter, sort_keys=False)
-            full_content = f"---\n{frontmatter_text}---"
-            full_content += self.content_before
-            full_content += f"\n## Yesterday's readings\n{self.readings_content}\n\n"
-            full_content += f"## Daily notes\n{self.content_after.strip()}"
-            f.write(full_content)
+    @readings.setter
+    def readings(self, items: list[str]):
+        """Sets the Yesterday's readings section from a list of strings."""
+        content = "\n".join(f"- {item}" for item in items)
+        self.set_section(self.SEC_READINGS, content)
