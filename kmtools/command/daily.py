@@ -3,6 +3,7 @@
 import click
 
 from kmtools.action.obsidian_daily_action import AddToObsidianDaily, SetupObsidianDaily
+from kmtools.action.obsidian_utility_action import ObsidianPageCleanup
 
 
 @click.command()
@@ -13,6 +14,7 @@ def daily(_):
     actions = [
         SetupObsidianDaily(),
         AddToObsidianDaily(),
+        ObsidianPageCleanup(),
     ]
 
     for action in actions:

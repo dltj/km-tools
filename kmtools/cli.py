@@ -20,6 +20,7 @@ from kmtools.command import (
     daily,
     hourly,
     hypothesis,
+    obsidian,
     pinboard,
     robustify,
     summarize,
@@ -206,6 +207,7 @@ cli.add_command(hourly.hourly)
 cli.add_command(daily.daily)
 cli.add_command(robustify.robustify)
 cli.add_command(summarize.summarize_command)
+cli.add_command(obsidian.obsidian)
 
 
 # pylint: disable=no-value-for-parameter
